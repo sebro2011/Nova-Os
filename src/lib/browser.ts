@@ -17,6 +17,22 @@ export function normalizeWebUrl(input: string): string {
   return url.toString();
 }
 
+/** Known hard blocks only; other sites may still refuse framed embedding. */
+export function getEmbeddingRestriction(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    const hostname = parsed.hostname.toLowerCase();
+    const isGoogleSearch = (hostname === 'google.com' || hostname === 'www.google.com')
+      && parsed.pathname.replace(/\/+$/, '') === '/search';
+    return isGoogleSearch
+      ? 'Google Search does not allow other websites to embed its results.'
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function displayUrl(url: string): string {
   try {
     const parsed = new URL(url);
