@@ -32,6 +32,23 @@ describe('NOVA Browser embedding fallback', () => {
     expect(document.querySelector('.animate-spin')).not.toBeInTheDocument();
   });
 
+  it('uses the official privacy-enhanced player for a mobile YouTube watch URL', async () => {
+    const user = userEvent.setup();
+    render(<BrowserApp />);
+
+    const originalUrl = 'https://m.youtube.com/watch?v=w2pSFFG0AzY';
+    await user.type(screen.getByLabelText('Address and search bar'), `${originalUrl}{enter}`);
+
+    const frame = await screen.findByTitle('YouTube video player');
+    expect(frame.tagName).toBe('IFRAME');
+    expect(frame).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/w2pSFFG0AzY?rel=0&playsinline=1');
+    expect(frame).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+    expect(frame).toHaveAttribute('allowfullscreen');
+    expect(frame.getAttribute('allow')).toContain('picture-in-picture');
+    expect(screen.getByLabelText('Address and search bar')).toHaveValue(originalUrl);
+    expect(screen.queryByText('If this page is blank, the site may block embedded viewing.')).not.toBeInTheDocument();
+  });
+
   it('continues to embed addresses without a known restriction', async () => {
     const user = userEvent.setup();
     render(<BrowserApp />);
@@ -41,6 +58,8 @@ describe('NOVA Browser embedding fallback', () => {
     const frame = await screen.findByTitle('NOVA Browser — example.com');
     expect(frame.tagName).toBe('IFRAME');
     expect(frame).toHaveAttribute('src', 'https://example.com/');
+    expect(frame).toHaveAttribute('referrerpolicy', 'no-referrer');
+    expect(frame).not.toHaveAttribute('allowfullscreen');
     expect(screen.queryByRole('heading', { name: 'Open this site in a normal browser tab' })).not.toBeInTheDocument();
   });
 });

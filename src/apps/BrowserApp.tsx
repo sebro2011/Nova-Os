@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useNotifications } from '../context/NotificationContext';
 import { clearStore, deleteRecord, getAllRecords, initializeDatabase, putRecord } from '../lib/db';
-import { displayUrl, getEmbeddingRestriction, normalizeWebUrl } from '../lib/browser';
+import { displayUrl, getEmbeddingRestriction, getYouTubeEmbedUrl, normalizeWebUrl } from '../lib/browser';
 import { createId, errorMessage, formatDateTime } from '../lib/utils';
 import type { BrowserBookmark, BrowserHistoryEntry } from '../types';
 
@@ -40,6 +40,7 @@ export default function BrowserApp() {
   const { notify } = useNotifications();
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
   const embeddingRestriction = activeTab.url === HOME_URL ? null : getEmbeddingRestriction(activeTab.url);
+  const youtubeEmbedUrl = activeTab.url === HOME_URL ? null : getYouTubeEmbedUrl(activeTab.url);
 
   const loadStorage = useCallback(async () => {
     try {
@@ -217,7 +218,7 @@ export default function BrowserApp() {
             <form className="relative mx-auto mt-6 max-w-lg" onSubmit={(event) => { event.preventDefault(); void navigate(address); }}><Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/30" /><input className="nova-input !h-12 !rounded-2xl !pl-11 !pr-24" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Search the web or enter a URL" aria-label="Search the web" /><button className="nova-button absolute right-1.5 top-1/2 h-9 min-h-9 -translate-y-1/2 px-3">Go</button></form>
             <div className="mt-7 grid gap-3 sm:grid-cols-3">{quickLinks.map((link) => <button key={link.url} className="nova-card p-4 text-left transition-colors hover:border-[rgba(var(--accent-rgb),0.25)] hover:bg-ink/[0.05]" onClick={() => void navigate(link.url)}><Globe2 size={17} className="accent-text" /><p className="mt-3 text-xs font-semibold text-ink/75">{link.title}</p><p className="mt-1 text-[10px] text-ink/30">{link.description}</p></button>)}</div>
             {bookmarks.length > 0 && <div className="mt-6 text-left"><div className="flex items-center gap-2"><Bookmark size={13} className="accent-text" /><h3 className="text-[11px] font-medium text-ink/55">Your bookmarks</h3></div><div className="mt-2 flex gap-2 overflow-x-auto pb-2 app-scroll">{bookmarks.map((bookmark) => <button key={bookmark.id} className="nova-card flex shrink-0 items-center gap-2 px-3 py-2 text-[10px] text-ink/50 hover:bg-ink/[0.05]" onClick={() => void navigate(bookmark.url)}><Star size={11} className="text-amber-300/70" />{bookmark.title}</button>)}</div></div>}
-            <div className="mx-auto mt-6 max-w-lg rounded-xl border border-ink/[0.06] bg-black/5 p-3.5 text-left"><div className="flex items-center gap-2 text-[11px] font-medium text-ink/55"><ShieldCheck size={14} className="text-emerald-300/60" /> Honest browser boundaries</div><p className="mt-2 text-[10px] leading-5 text-ink/30">NOVA uses your browser’s engine and a sandboxed frame. Known blocked pages use an external-only screen; other sites may also require “Open externally.” NOVA is not a VPN or a privacy proxy.</p></div>
+            <div className="mx-auto mt-6 max-w-lg rounded-xl border border-ink/[0.06] bg-black/5 p-3.5 text-left"><div className="flex items-center gap-2 text-[11px] font-medium text-ink/55"><ShieldCheck size={14} className="text-emerald-300/60" /> Honest browser boundaries</div><p className="mt-2 text-[10px] leading-5 text-ink/30">NOVA uses your browser’s engine and a sandboxed frame. YouTube video links use the official embed player. Known blocked pages use an external-only screen; other sites may also require “Open externally.” NOVA is not a VPN or a privacy proxy.</p></div>
           </div>
         </div> : embeddingRestriction ? <div className="app-scroll h-full overflow-y-auto bg-[radial-gradient(ellipse_at_top,rgba(var(--accent-rgb),0.08),transparent_55%)] p-5" role="status">
           <div className="mx-auto flex min-h-full max-w-md flex-col items-center justify-center py-6 text-center">
@@ -235,14 +236,16 @@ export default function BrowserApp() {
         </div> : <>
           <iframe
             key={`${activeTab.id}-${activeTab.url}-${frameKey}`}
-            src={activeTab.url}
-            title={`NOVA Browser — ${displayUrl(activeTab.url)}`}
+            src={youtubeEmbedUrl ?? activeTab.url}
+            title={youtubeEmbedUrl ? 'YouTube video player' : `NOVA Browser — ${displayUrl(activeTab.url)}`}
             className="h-full w-full border-0 bg-white"
             sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-downloads"
-            referrerPolicy="no-referrer"
+            referrerPolicy={youtubeEmbedUrl ? 'strict-origin-when-cross-origin' : 'no-referrer'}
+            allow={youtubeEmbedUrl ? 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share' : undefined}
+            allowFullScreen={Boolean(youtubeEmbedUrl)}
             onLoad={() => setTabs((current) => current.map((tab) => tab.id === activeTab.id ? { ...tab, loading: false } : tab))}
           />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-2"><div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full border border-ink/10 bg-[var(--editor-bg)] px-3 py-1.5 text-[9px] text-ink/40 shadow-lg backdrop-blur-md"><span className="truncate">If this page is blank, the site may block embedded viewing.</span><button className="pointer-events-auto flex shrink-0 items-center gap-1 text-nova-blue hover:text-ink" onClick={openExternally}>Open externally <ExternalLink size={10} /></button></div></div>
+          {!youtubeEmbedUrl && <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-2"><div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full border border-ink/10 bg-[var(--editor-bg)] px-3 py-1.5 text-[9px] text-ink/40 shadow-lg backdrop-blur-md"><span className="truncate">If this page is blank, the site may block embedded viewing.</span><button className="pointer-events-auto flex shrink-0 items-center gap-1 text-nova-blue hover:text-ink" onClick={openExternally}>Open externally <ExternalLink size={10} /></button></div></div>}
         </>}
 
         {panel && <aside className="absolute inset-y-0 right-0 z-20 flex w-[min(330px,92%)] flex-col border-l border-ink/[0.08] bg-[var(--editor-bg)] shadow-2xl">

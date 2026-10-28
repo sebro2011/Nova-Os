@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getEmbeddingRestriction, normalizeWebUrl } from './browser';
+import { getEmbeddingRestriction, getYouTubeEmbedUrl, normalizeWebUrl } from './browser';
 
 describe('browser address normalization', () => {
   it('accepts HTTP and HTTPS addresses', () => {
@@ -29,5 +29,24 @@ describe('known frame embedding restrictions', () => {
     expect(getEmbeddingRestriction('https://maps.google.com/')).toBeNull();
     expect(getEmbeddingRestriction('https://www.wikipedia.org/')).toBeNull();
     expect(getEmbeddingRestriction('nova://home')).toBeNull();
+  });
+});
+
+describe('YouTube embedded player adaptation', () => {
+  it('converts watch, mobile, short, and share links to the privacy-enhanced player', () => {
+    const expected = 'https://www.youtube-nocookie.com/embed/w2pSFFG0AzY?rel=0&playsinline=1';
+    expect(getYouTubeEmbedUrl('https://www.youtube.com/watch?v=w2pSFFG0AzY')).toBe(expected);
+    expect(getYouTubeEmbedUrl('https://m.youtube.com/watch?v=w2pSFFG0AzY')).toBe(expected);
+    expect(getYouTubeEmbedUrl('https://youtu.be/w2pSFFG0AzY')).toBe(expected);
+    expect(getYouTubeEmbedUrl('https://www.youtube.com/shorts/w2pSFFG0AzY')).toBe(expected);
+    expect(getYouTubeEmbedUrl('https://www.youtube.com/embed/w2pSFFG0AzY')).toBe(expected);
+  });
+
+  it('does not adapt invalid video IDs, unrelated pages, or lookalike hosts', () => {
+    expect(getYouTubeEmbedUrl('https://www.youtube.com/watch?v=invalid')).toBeNull();
+    expect(getYouTubeEmbedUrl('https://www.youtube.com/')).toBeNull();
+    expect(getYouTubeEmbedUrl('https://youtube.com.evil.example/watch?v=w2pSFFG0AzY')).toBeNull();
+    expect(getYouTubeEmbedUrl('https://example.com/watch?v=w2pSFFG0AzY')).toBeNull();
+    expect(getYouTubeEmbedUrl('nova://home')).toBeNull();
   });
 });
