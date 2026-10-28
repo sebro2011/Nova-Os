@@ -26,7 +26,7 @@ export function StartMenu({ onClose, onOpen }: { onClose: () => void; onOpen: (a
         <div className="p-4 pb-3">
           <label className="relative block">
             <span className="sr-only">Search apps</span>
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" />
             <input className="nova-input !pl-9" placeholder="Find an app…" value={query} onChange={(event) => setQuery(event.target.value)} autoFocus />
           </label>
         </div>
@@ -36,18 +36,18 @@ export function StartMenu({ onClose, onOpen }: { onClose: () => void; onOpen: (a
             {apps.map((app) => {
               const Icon = app.icon;
               return (
-                <button key={app.id} className="group flex items-center gap-3 rounded-xl border border-transparent p-2.5 text-left transition-colors hover:border-white/[0.07] hover:bg-white/[0.05]" onClick={() => { onOpen(app.id); onClose(); }}>
+                <button key={app.id} className="group flex items-center gap-3 rounded-xl border border-transparent p-2.5 text-left transition-colors hover:border-ink/[0.07] hover:bg-ink/[0.05]" onClick={() => { onOpen(app.id); onClose(); }}>
                   <span className="accent-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105"><Icon size={18} /></span>
-                  <span className="min-w-0"><span className="block truncate text-xs font-medium text-white/85">{app.title}</span><span className="mt-0.5 block truncate text-[10px] text-white/35">{app.category}</span></span>
+                  <span className="min-w-0"><span className="block truncate text-xs font-medium text-ink/85">{app.title}</span><span className="mt-0.5 block truncate text-[10px] text-ink/35">{app.category}</span></span>
                 </button>
               );
             })}
           </div>
-          {apps.length === 0 && <p className="p-8 text-center text-xs text-white/40">No apps match “{query}”.</p>}
+          {apps.length === 0 && <p className="p-8 text-center text-xs text-ink/40">No apps match “{query}”.</p>}
         </div>
-        <div className="flex items-center gap-3 border-t border-white/[0.07] bg-black/10 p-3">
+        <div className="flex items-center gap-3 border-t border-ink/[0.07] bg-black/10 p-3">
           <NovaLogo size="sm" />
-          <div className="min-w-0 flex-1"><p className="text-xs font-medium text-white/75">Local Explorer</p><p className="text-[10px] text-white/35">Private browser session</p></div>
+          <div className="min-w-0 flex-1"><p className="text-xs font-medium text-ink/75">Local Explorer</p><p className="text-[10px] text-ink/35">Private browser session</p></div>
           <button className="icon-button" onClick={() => { onOpen('settings'); onClose(); }} aria-label="Open Settings"><Settings2 size={16} /></button>
         </div>
       </motion.section>

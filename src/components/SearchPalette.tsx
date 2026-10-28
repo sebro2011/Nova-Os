@@ -17,7 +17,7 @@ interface SearchResult {
 
 export function SearchPalette({ onClose, onOpen }: { onClose: () => void; onOpen: (appId: AppId) => void }) {
   const [query, setQuery] = useState('');
-  const [snapshot, setSnapshot] = useState<DatabaseSnapshot>({ files: [], notes: [], events: [], history: [] });
+  const [snapshot, setSnapshot] = useState<DatabaseSnapshot>({ files: [], notes: [], events: [], history: [], bookmarks: [] });
   const [selected, setSelected] = useState(0);
   const { preferences } = usePreferences();
   const systemReducedMotion = useReducedMotion();
@@ -65,21 +65,21 @@ export function SearchPalette({ onClose, onOpen }: { onClose: () => void; onOpen
         aria-modal="true"
         aria-label="Global search"
       >
-        <label className="flex items-center gap-3 border-b border-white/[0.08] px-4">
+        <label className="flex items-center gap-3 border-b border-ink/[0.08] px-4">
           <Search size={19} className="accent-text shrink-0" />
           <span className="sr-only">Search apps, files, notes, and events</span>
-          <input className="h-14 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" placeholder="Search apps, files, notes, and events…" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={onKeyDown} autoFocus />
-          <kbd className="rounded-md border border-white/10 px-1.5 py-1 text-[9px] text-white/35">ESC</kbd>
+          <input className="h-14 min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink/30" placeholder="Search apps, files, notes, and events…" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={onKeyDown} autoFocus />
+          <kbd className="rounded-md border border-ink/10 px-1.5 py-1 text-[9px] text-ink/35">ESC</kbd>
         </label>
         <div className="app-scroll max-h-[55vh] overflow-y-auto p-2">
           <p className="eyebrow px-2 py-2">{query ? `${results.length} RESULTS` : 'QUICK LAUNCH'}</p>
           {results.map((result, index) => {
             const Icon = result.icon;
-            return <button key={`${result.appId}-${result.id}`} className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors ${selected === index ? 'bg-white/[0.075]' : 'hover:bg-white/[0.04]'}`} onMouseEnter={() => setSelected(index)} onClick={() => choose(result)}><span className="accent-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"><Icon size={17} /></span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium text-white/85">{result.title}</span><span className="mt-0.5 block truncate text-[10px] text-white/35">{result.subtitle}</span></span><span className="text-[9px] uppercase tracking-wider text-white/25">{appRegistry[result.appId].title}</span></button>;
+            return <button key={`${result.appId}-${result.id}`} className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors ${selected === index ? 'bg-ink/[0.075]' : 'hover:bg-ink/[0.04]'}`} onMouseEnter={() => setSelected(index)} onClick={() => choose(result)}><span className="accent-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"><Icon size={17} /></span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium text-ink/85">{result.title}</span><span className="mt-0.5 block truncate text-[10px] text-ink/35">{result.subtitle}</span></span><span className="text-[9px] uppercase tracking-wider text-ink/25">{appRegistry[result.appId].title}</span></button>;
           })}
-          {results.length === 0 && <div className="px-5 py-10 text-center"><p className="text-sm text-white/50">Nothing found in this orbit</p><p className="mt-2 text-xs text-white/30">Try an app name, note, file, or event.</p></div>}
+          {results.length === 0 && <div className="px-5 py-10 text-center"><p className="text-sm text-ink/50">Nothing found in this orbit</p><p className="mt-2 text-xs text-ink/30">Try an app name, note, file, or event.</p></div>}
         </div>
-        <div className="flex items-center gap-4 border-t border-white/[0.06] px-4 py-2.5 text-[9px] text-white/25"><span>↑↓ Navigate</span><span>↵ Open</span><span className="ml-auto">Local search only</span></div>
+        <div className="flex items-center gap-4 border-t border-ink/[0.06] px-4 py-2.5 text-[9px] text-ink/25"><span>↑↓ Navigate</span><span>↵ Open</span><span className="ml-auto">Local search only</span></div>
       </motion.section>
     </div>
   );

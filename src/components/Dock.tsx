@@ -22,7 +22,7 @@ export function Dock({ windows, activeAppId, onOpen, onLauncher, launcherExpande
         <button className="dock-icon shrink-0" onClick={onLauncher} aria-label="Open app launcher" aria-expanded={launcherExpanded} title="All apps">
           <LayoutGrid size={20} className="accent-text" />
         </button>
-        <span className="mx-0.5 h-7 w-px shrink-0 self-center bg-white/10" />
+        <span className="mx-0.5 h-7 w-px shrink-0 self-center bg-ink/10" />
         {appIds.map((appId) => {
           const definition = appRegistry[appId];
           const Icon = definition.icon;

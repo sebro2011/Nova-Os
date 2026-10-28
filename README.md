@@ -9,19 +9,19 @@ A lightweight, responsive, local-first desktop environment that runs entirely in
 ## Features
 
 - Animated boot and first-run welcome experience
-- Cosmic Dark design with Liquid Glass-inspired surfaces, three themes, three accents, and three static wallpapers
+- Cosmic Dark and bright light modes with Liquid Glass-inspired surfaces, three themes, three accents, three built-in wallpapers, and custom image uploads
 - Desktop icons, app launcher, dock, taskbar, system tray, clock, quick settings, and notification center
 - Multi-window manager with focus, drag, eight-direction resize, minimize, maximize/restore, and close
 - Global search across apps, virtual files, notes, and events (`Ctrl + K`)
 - **Files:** virtual folders and plain-text files, rename, safe Trash/restore, permanent-delete confirmation, text import, and download
-- **NOVA Browser:** HTTP/HTTPS navigation, search, back/forward, local history, sandboxed frames, and external-tab fallback
+- **NOVA Browser:** up to eight session tabs, persistent bookmarks, HTTP/HTTPS navigation, search, back/forward, clearable local history, sandboxed frames, and external-tab fallback
 - **Terminal:** a restricted custom command interpreter—not a system shell
 - **Notes:** local notes with debounced autosave
 - **Calculator:** keyboard-friendly arithmetic using a dedicated parser, with no `eval`
 - **Calendar:** six-week month view and local event management
 - **Media Player:** local audio/video playback with a session-only queue
 - **App Center:** launch and pin built-in apps; no executable installation
-- **Settings:** themes, accessibility, performance mode, browser storage estimates, and data controls
+- **Settings:** light/dark mode, themes, custom locally stored wallpapers, accessibility, performance mode, browser storage estimates, and data controls
 - Validated JSON backup import with preview/confirmation and full JSON export
 - Keyboard shortcuts, Help Center, responsive layouts, reduced-motion support, and storage error states
 
@@ -125,11 +125,13 @@ IndexedDB contains these object stores:
 - `notes`: note title/content/timestamps
 - `events`: local calendar events
 - `history`: addresses explicitly submitted in NOVA Browser
+- `bookmarks`: persistent NOVA Browser bookmarks
+- `wallpapers`: user-uploaded PNG, JPEG, and WebP image blobs
 - `meta`: database initialization metadata
 
 Preferences are stored separately in LocalStorage. Media Player uses temporary object URLs; its queue is **not persisted**.
 
-Use **Settings → Data → Export backup** regularly. Backups are unencrypted JSON and may contain personal notes, events, file contents, and browsing addresses. Import is limited to 8 MB, validates the complete schema and relationships, reconstructs plain objects, shows a preview, and requires confirmation before replacing current data.
+Use **Settings → Data → Export backup** regularly. Backups are unencrypted JSON and may contain personal notes, events, file contents, browsing addresses, and bookmarks. Import is limited to 8 MB, validates the complete schema and relationships, reconstructs plain objects, shows a preview, and requires confirmation before replacing current data. Custom wallpaper image blobs are **not** included in JSON backups and remain on the current browser origin.
 
 ## Security model
 
@@ -139,7 +141,8 @@ Use **Settings → Data → Export backup** regularly. Backups are unencrypted J
 - Browser navigation permits only HTTP/HTTPS and rejects embedded credentials
 - Imported notes/files are rendered as text, never as injected HTML
 - Backup imports validate types, lengths, IDs, dates, URLs, folder relationships, and collection limits
-- Virtual Files cannot browse or modify the Windows file system; users must explicitly choose local text/media files
+- Virtual Files cannot browse or modify the Windows file system; users must explicitly choose local text/media/wallpaper files
+- Wallpaper uploads accept only decodable PNG, JPEG, or WebP images up to 10 MB and 40 megapixels; SVG and animated GIF files are rejected
 - Vercel headers include CSP, `nosniff`, frame restrictions, referrer policy, and a restrictive permissions policy
 - Quick Settings CPU/RAM/GPU figures are visibly labeled **SIMULATED**. Online status and logical CPU thread count are browser-reported
 
@@ -162,7 +165,7 @@ For the target Windows 10 PC (Intel Core i5-3330, 8 GB RAM, GTX 960 2 GB), use a
 Executed during initial implementation:
 
 - `npm run typecheck` — passed
-- `npm test` — **7 test files, 23 tests passed** (including window-manager regressions)
+- `npm test` — **8 test files, 27 tests passed** (including window-manager, preference-migration, and backup-validation regressions)
 - `npm run build` — passed; static output generated successfully
 - `npm audit` — **0 dependency vulnerabilities reported** after upgrading to Vite 8.3.5 and Vitest 5.0.5
 - Source scan — no dangerous HTML injection, `eval`, `Function` constructor, or shell-execution APIs in application source
@@ -173,7 +176,8 @@ These results describe the checks actually run in the implementation environment
 
 - Browser storage is origin-specific and can be cleared by site-data controls, private browsing behavior, browser policy, or storage pressure. Persistent-storage requests are browser-decided and do not replace backups.
 - NOVA Browser is an interface inside the host browser, not a separate engine, VPN, or proxy. Many websites refuse framed embedding through `X-Frame-Options` or CSP. Use **Open externally**.
-- Cross-origin browser rules prevent NOVA from reliably tracking navigation that occurs inside a framed site. Back/forward primarily covers addresses submitted through NOVA.
+- Cross-origin browser rules prevent NOVA from reliably tracking navigation that occurs inside a framed site. Back/forward primarily covers addresses submitted through NOVA. Browser tabs are session-only and are not restored after a reload.
+- Custom wallpaper images are stored only in IndexedDB and are not included in JSON backups.
 - External pages have their own cookies, permissions, network requests, and privacy policies.
 - Media codec support depends on the browser. Media playlists last only for the current session and individual selections are limited to 500 MB.
 - The terminal is intentionally simulated and restricted; it cannot run CMD, PowerShell, Bash, packages, or user code.

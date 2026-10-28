@@ -104,29 +104,29 @@ export default function NotesApp() {
 
   return (
     <div className="relative flex h-full bg-black/5">
-      <aside className={`${mobileList ? 'absolute inset-0 z-20 flex bg-[#0c101e]' : 'hidden'} w-full shrink-0 flex-col border-r border-white/[0.06] bg-black/10 sm:relative sm:flex sm:w-56`}>
+      <aside className={`${mobileList ? 'absolute inset-0 z-20 flex bg-[var(--editor-bg)]' : 'hidden'} w-full shrink-0 flex-col border-r border-ink/[0.06] bg-black/10 sm:relative sm:flex sm:w-56`}>
         <div className="p-3 pb-2">
           <div className="flex items-center gap-2"><p className="eyebrow flex-1">NOTEBOOK</p><button className="icon-button h-8 w-8" onClick={() => void createNote()} aria-label="Create note"><Plus size={16} /></button></div>
-          <label className="relative mt-3 block"><Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30" /><span className="sr-only">Search notes</span><input className="nova-input !min-h-8 !py-1.5 !pl-8 !text-[11px]" placeholder="Search notes" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+          <label className="relative mt-3 block"><Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink/30" /><span className="sr-only">Search notes</span><input className="nova-input !min-h-8 !py-1.5 !pl-8 !text-[11px]" placeholder="Search notes" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
         </div>
         <div className="app-scroll min-h-0 flex-1 overflow-y-auto p-2">
-          {filtered.map((note) => <button key={note.id} className={`mb-1 w-full rounded-xl border p-3 text-left transition-colors ${selectedId === note.id ? 'border-[rgba(var(--accent-rgb),0.18)] bg-[rgba(var(--accent-rgb),0.09)]' : 'border-transparent hover:bg-white/[0.035]'}`} onClick={() => { setSelectedId(note.id); setMobileList(false); }}><span className="block truncate text-xs font-medium text-white/75">{note.title || 'Untitled note'}</span><span className="mt-1.5 block truncate text-[10px] text-white/30">{note.content || 'No additional text'}</span><span className="mt-2 block text-[9px] text-white/20">{formatDateTime(note.updatedAt)}</span></button>)}
-          {!filtered.length && <p className="p-6 text-center text-[11px] text-white/30">No notes found.</p>}
+          {filtered.map((note) => <button key={note.id} className={`mb-1 w-full rounded-xl border p-3 text-left transition-colors ${selectedId === note.id ? 'border-[rgba(var(--accent-rgb),0.18)] bg-[rgba(var(--accent-rgb),0.09)]' : 'border-transparent hover:bg-ink/[0.035]'}`} onClick={() => { setSelectedId(note.id); setMobileList(false); }}><span className="block truncate text-xs font-medium text-ink/75">{note.title || 'Untitled note'}</span><span className="mt-1.5 block truncate text-[10px] text-ink/30">{note.content || 'No additional text'}</span><span className="mt-2 block text-[9px] text-ink/20">{formatDateTime(note.updatedAt)}</span></button>)}
+          {!filtered.length && <p className="p-6 text-center text-[11px] text-ink/30">No notes found.</p>}
         </div>
-        <p className="border-t border-white/[0.055] p-3 text-[9px] text-white/25">{notes.length} notes · IndexedDB</p>
+        <p className="border-t border-ink/[0.055] p-3 text-[9px] text-ink/25">{notes.length} notes · IndexedDB</p>
       </aside>
 
       <section className="flex min-w-0 flex-1 flex-col">
         {selected ? <>
-          <div className="flex h-12 shrink-0 items-center gap-2 border-b border-white/[0.06] px-3">
+          <div className="flex h-12 shrink-0 items-center gap-2 border-b border-ink/[0.06] px-3">
             <button className="icon-button sm:hidden" onClick={() => setMobileList(true)} aria-label="Show notes list"><List size={16} /></button>
-            <span className={`flex items-center gap-1.5 text-[10px] ${saveState.includes('failed') ? 'text-red-300' : 'text-white/30'}`} role="status">{saveState === 'Saved locally' && <Check size={12} className="text-emerald-300/60" />}{saveState}</span>
+            <span className={`flex items-center gap-1.5 text-[10px] ${saveState.includes('failed') ? 'text-red-300' : 'text-ink/30'}`} role="status">{saveState === 'Saved locally' && <Check size={12} className="text-emerald-300/60" />}{saveState}</span>
             <button className="icon-button ml-auto hover:!text-red-300" onClick={() => void removeNote()} aria-label="Delete note"><Trash2 size={15} /></button>
           </div>
-          <input className="shrink-0 border-b border-white/[0.045] bg-transparent px-5 py-4 text-xl font-semibold tracking-tight text-white/85 outline-none placeholder:text-white/20 sm:px-7" value={selected.title} onChange={(event) => updateSelected({ title: event.target.value.slice(0, 160) })} placeholder="Untitled note" aria-label="Note title" />
-          <textarea className="app-scroll min-h-0 flex-1 resize-none bg-transparent px-5 py-5 text-[13px] leading-7 text-white/65 outline-none placeholder:text-white/20 sm:px-7" value={selected.content} onChange={(event) => updateSelected({ content: event.target.value.slice(0, 1_000_000) })} placeholder="Write what’s on your mind…" aria-label="Note content" />
-          <div className="flex shrink-0 items-center border-t border-white/[0.05] px-4 py-2 text-[9px] text-white/25"><span>{selected.content.trim() ? selected.content.trim().split(/\s+/).length : 0} words</span><span className="ml-auto">Autosaves after a short pause</span></div>
-        </> : <div className="flex flex-1 flex-col items-center justify-center p-6 text-center"><FileText size={28} className="text-white/15" /><p className="mt-4 text-sm text-white/50">A blank page, infinite possibilities.</p><button className="nova-button mt-5" onClick={() => void createNote()}><Plus size={15} /> Create a note</button></div>}
+          <input className="shrink-0 border-b border-ink/[0.045] bg-transparent px-5 py-4 text-xl font-semibold tracking-tight text-ink/85 outline-none placeholder:text-ink/20 sm:px-7" value={selected.title} onChange={(event) => updateSelected({ title: event.target.value.slice(0, 160) })} placeholder="Untitled note" aria-label="Note title" />
+          <textarea className="app-scroll min-h-0 flex-1 resize-none bg-transparent px-5 py-5 text-[13px] leading-7 text-ink/65 outline-none placeholder:text-ink/20 sm:px-7" value={selected.content} onChange={(event) => updateSelected({ content: event.target.value.slice(0, 1_000_000) })} placeholder="Write what’s on your mind…" aria-label="Note content" />
+          <div className="flex shrink-0 items-center border-t border-ink/[0.05] px-4 py-2 text-[9px] text-ink/25"><span>{selected.content.trim() ? selected.content.trim().split(/\s+/).length : 0} words</span><span className="ml-auto">Autosaves after a short pause</span></div>
+        </> : <div className="flex flex-1 flex-col items-center justify-center p-6 text-center"><FileText size={28} className="text-ink/15" /><p className="mt-4 text-sm text-ink/50">A blank page, infinite possibilities.</p><button className="nova-button mt-5" onClick={() => void createNote()}><Plus size={15} /> Create a note</button></div>}
       </section>
     </div>
   );

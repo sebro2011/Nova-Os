@@ -6,10 +6,11 @@ import { LaunchProvider } from '../context/LaunchContext';
 import { useNotifications } from '../context/NotificationContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useWindowManager } from '../hooks/useWindowManager';
-import { initializeDatabase } from '../lib/db';
+import { getRecord, initializeDatabase } from '../lib/db';
 import { errorMessage } from '../lib/utils';
-import type { AppId } from '../types';
+import type { AppId, WallpaperRecord } from '../types';
 import { BootScreen } from './BootScreen';
+import { DesktopWallpaper } from './DesktopWallpaper';
 import { Dock } from './Dock';
 import { NotificationCenter } from './NotificationCenter';
 import { QuickSettings } from './QuickSettings';
@@ -33,6 +34,7 @@ export function DesktopShell() {
   const [entered, setEntered] = useState(false);
   const [panel, setPanel] = useState<PanelName>(null);
   const [storageWarning, setStorageWarning] = useState('');
+  const [customWallpaperUrl, setCustomWallpaperUrl] = useState('');
   const workspaceRef = useRef<HTMLDivElement>(null);
   const storageAttempted = useRef(false);
   const { preferences } = usePreferences();
@@ -56,6 +58,29 @@ export function DesktopShell() {
       notify({ title: 'Local storage needs attention', message, tone: 'error' });
     });
   }, [entered, notify]);
+
+  useEffect(() => {
+    let active = true;
+    let objectUrl = '';
+    if (preferences.wallpaper !== 'custom' || !preferences.customWallpaperId) {
+      setCustomWallpaperUrl('');
+      return;
+    }
+    getRecord<WallpaperRecord>('wallpapers', preferences.customWallpaperId).then((record) => {
+      if (!record?.blob) throw new Error('The selected custom wallpaper is no longer available. Choose another wallpaper in Settings.');
+      objectUrl = URL.createObjectURL(record.blob);
+      if (active) setCustomWallpaperUrl(objectUrl);
+      else URL.revokeObjectURL(objectUrl);
+    }).catch((error) => {
+      if (!active) return;
+      setCustomWallpaperUrl('');
+      notify({ title: 'Custom wallpaper unavailable', message: errorMessage(error), tone: 'warning' });
+    });
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [preferences.wallpaper, preferences.customWallpaperId, notify]);
 
   useEffect(() => {
     if (!entered) return;
@@ -103,13 +128,14 @@ export function DesktopShell() {
   };
 
   if (!entered) {
-    return <div className="nova-root h-full" data-theme={preferences.theme} data-accent={preferences.accent} data-wallpaper={preferences.wallpaper} data-reduced-motion={preferences.reduceMotion}><BootScreen onComplete={finishBoot} /></div>;
+    return <div className="nova-root h-full" data-color-mode={preferences.colorMode} data-theme={preferences.theme} data-accent={preferences.accent} data-wallpaper={preferences.wallpaper} data-reduced-motion={preferences.reduceMotion}><BootScreen onComplete={finishBoot} wallpaperUrl={customWallpaperUrl} /></div>;
   }
 
   return (
     <LaunchProvider value={launchValue}>
       <main
         className={`nova-root relative flex h-full flex-col overflow-hidden ${preferences.compactMode ? 'compact-mode' : ''}`}
+        data-color-mode={preferences.colorMode}
         data-theme={preferences.theme}
         data-accent={preferences.accent}
         data-wallpaper={preferences.wallpaper}
@@ -117,7 +143,7 @@ export function DesktopShell() {
         data-performance={preferences.performanceMode}
       >
         <a href="#desktop-workspace" className="sr-only-focusable fixed left-3 top-3 z-[13000] rounded-lg bg-white px-3 py-2 text-xs text-black">Skip to desktop</a>
-        <div className="nova-wallpaper" />
+        <DesktopWallpaper imageUrl={customWallpaperUrl} />
         <Taskbar
           activeTitle={activeWindow ? appRegistry[activeWindow.appId].title : undefined}
           expandedPanel={panel}
@@ -148,8 +174,8 @@ export function DesktopShell() {
           {windows.length === 0 && (
             <section className="pointer-events-none absolute bottom-7 right-6 hidden max-w-xs text-right md:block">
               <p className="eyebrow">YOUR LOCAL UNIVERSE</p>
-              <h1 className="mt-2 text-2xl font-light tracking-tight text-white/75">Beyond Earth.<br /><span className="font-semibold text-white/90">Beyond Limits.</span></h1>
-              <p className="mt-3 text-[11px] leading-5 text-white/35">Double-click a desktop icon or press <span className="text-white/55">Ctrl + K</span> to begin.</p>
+              <h1 className="mt-2 text-2xl font-light tracking-tight text-ink/75">Beyond Earth.<br /><span className="font-semibold text-ink/90">Beyond Limits.</span></h1>
+              <p className="mt-3 text-[11px] leading-5 text-ink/35">Double-click a desktop icon or press <span className="text-ink/55">Ctrl + K</span> to begin.</p>
             </section>
           )}
 

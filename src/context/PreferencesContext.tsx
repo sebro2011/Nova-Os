@@ -16,6 +16,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [storageError, setStorageError] = useState('');
 
   useEffect(() => {
+    document.documentElement.style.colorScheme = preferences.colorMode;
     try {
       savePreferences(preferences);
       setStorageError('');

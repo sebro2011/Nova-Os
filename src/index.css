@@ -12,7 +12,10 @@
   --accent: #63a8ff;
   --accent-rgb: 99, 168, 255;
   --accent-secondary: #a78bfa;
+  --ink-rgb: 255 255 255;
   --page: #070913;
+  --app-bg: #090d18;
+  --editor-bg: rgba(11, 15, 28, 0.985);
   --text: #f5f7ff;
   --muted: #a2abc2;
   --glass: rgba(13, 17, 31, 0.76);
@@ -78,6 +81,15 @@ button:disabled {
 .nova-root {
   color: var(--text);
   background: var(--page);
+  color-scheme: dark;
+}
+
+.dark-surface {
+  --ink-rgb: 255 255 255;
+  --text: #f5f7ff;
+  --app-bg: #090d18;
+  --editor-bg: rgba(11, 15, 28, 0.985);
+  color-scheme: dark;
 }
 
 .nova-root[data-theme='midnight'] {
@@ -94,6 +106,19 @@ button:disabled {
   --accent-secondary: #d17ffa;
 }
 
+.nova-root[data-color-mode='light'] {
+  --ink-rgb: 15 23 42;
+  --page: #edf2fa;
+  --app-bg: #f4f7fc;
+  --editor-bg: rgba(248, 250, 255, 0.985);
+  --text: #101828;
+  --muted: #5b6474;
+  --glass: rgba(255, 255, 255, 0.76);
+  --glass-strong: rgba(248, 250, 255, 0.94);
+  --line: rgba(15, 23, 42, 0.12);
+  color-scheme: light;
+}
+
 .nova-root[data-accent='violet'] {
   --accent: #b39afa;
   --accent-rgb: 179, 154, 250;
@@ -102,6 +127,21 @@ button:disabled {
 .nova-root[data-accent='cyan'] {
   --accent: #55e6e0;
   --accent-rgb: 85, 230, 224;
+}
+
+.nova-root[data-color-mode='light'] {
+  --accent: #2563eb;
+  --accent-rgb: 37, 99, 235;
+}
+
+.nova-root[data-color-mode='light'][data-accent='violet'] {
+  --accent: #7c3aed;
+  --accent-rgb: 124, 58, 237;
+}
+
+.nova-root[data-color-mode='light'][data-accent='cyan'] {
+  --accent: #0f8290;
+  --accent-rgb: 15, 130, 144;
 }
 
 .nova-wallpaper {
@@ -168,6 +208,50 @@ button:disabled {
 .nova-root[data-wallpaper='starlight'] .nova-wallpaper::before {
   opacity: 0.85;
   background-size: 120px 150px, 170px 210px, 150px 190px, 230px 220px;
+}
+
+.nova-root[data-color-mode='light'] .nova-wallpaper {
+  background:
+    radial-gradient(ellipse at 12% 4%, rgba(99, 168, 255, 0.24), transparent 44%),
+    radial-gradient(ellipse at 88% 82%, rgba(167, 139, 250, 0.18), transparent 44%),
+    linear-gradient(145deg, #f7faff, #e7eef9 60%, #e9e7f5);
+}
+
+.nova-root[data-color-mode='light'] .nova-wallpaper::before {
+  opacity: 0.16;
+}
+
+.nova-wallpaper.has-custom {
+  background: var(--page);
+}
+
+.custom-wallpaper-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.nova-wallpaper.has-custom::before {
+  opacity: 0;
+}
+
+.nova-wallpaper.has-custom::after {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  transform: none;
+  background: linear-gradient(115deg, rgba(3, 6, 15, 0.28), transparent 60%, rgba(3, 6, 15, 0.16));
+}
+
+.nova-root[data-color-mode='light'] .nova-wallpaper.has-custom::after {
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.18), transparent 60%, rgba(255, 255, 255, 0.1));
 }
 
 .glass-panel {
@@ -322,7 +406,7 @@ textarea.nova-input {
 }
 
 select.nova-input {
-  color-scheme: dark;
+  color-scheme: inherit;
 }
 
 .nova-card {
@@ -443,6 +527,108 @@ select.nova-input {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+}
+
+.nova-root[data-color-mode='light'] .desktop-topbar,
+.nova-root[data-color-mode='light'] .desktop-dock {
+  border-color: rgba(15, 23, 42, 0.09);
+  background: rgba(248, 250, 255, 0.7);
+}
+
+.nova-root[data-color-mode='light'] .window-frame {
+  border-color: rgba(15, 23, 42, 0.13);
+  box-shadow: 0 26px 70px rgba(51, 65, 95, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.nova-root[data-color-mode='light'] .glass-panel {
+  box-shadow: 0 24px 70px rgba(51, 65, 95, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.nova-root[data-color-mode='light'] .nova-button {
+  color: #10203c;
+}
+
+.nova-root[data-color-mode='light'] .nova-button-secondary {
+  background: rgba(15, 23, 42, 0.045);
+}
+
+.nova-root[data-color-mode='light'] .nova-button-danger {
+  color: #b42318;
+}
+
+.nova-root[data-color-mode='light'] .icon-button {
+  color: rgba(15, 23, 42, 0.62);
+}
+
+.nova-root[data-color-mode='light'] .icon-button:hover:not(:disabled),
+.nova-root[data-color-mode='light'] .icon-button[aria-expanded='true'],
+.nova-root[data-color-mode='light'] .icon-button[data-active='true'] {
+  color: #0f172a;
+  border-color: rgba(15, 23, 42, 0.07);
+  background: rgba(15, 23, 42, 0.07);
+}
+
+.nova-root[data-color-mode='light'] .nova-input {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.nova-root[data-color-mode='light'] .nova-input::placeholder {
+  color: rgba(15, 23, 42, 0.42);
+}
+
+.nova-root[data-color-mode='light'] .nova-card,
+.nova-root[data-color-mode='light'] .glass-subtle {
+  border-color: rgba(15, 23, 42, 0.085);
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.nova-root[data-color-mode='light'] .desktop-icon {
+  text-shadow: 0 2px 6px rgba(255, 255, 255, 0.85);
+}
+
+.nova-root[data-color-mode='light'] .dock-icon {
+  color: rgba(15, 23, 42, 0.72);
+}
+
+.nova-root[data-color-mode='light'] .dock-icon:hover {
+  color: #0f172a;
+}
+
+.nova-root[data-color-mode='light'] .app-scroll {
+  scrollbar-color: rgba(15, 23, 42, 0.2) transparent;
+}
+
+.nova-root[data-color-mode='light'] .app-scroll::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.18);
+}
+
+.nova-root[data-color-mode='light'] .dark-surface .icon-button {
+  color: rgba(235, 240, 255, 0.68);
+}
+
+.nova-root[data-color-mode='light'] .dark-surface .icon-button:hover:not(:disabled) {
+  color: white;
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.nova-root[data-color-mode='light'] .dark-surface .app-scroll {
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+.nova-root[data-color-mode='light'] .text-red-200,
+.nova-root[data-color-mode='light'] .text-red-300 {
+  color: #b42318;
+}
+
+.nova-root[data-color-mode='light'] .text-amber-200,
+.nova-root[data-color-mode='light'] .text-amber-300 {
+  color: #8a4b0f;
+}
+
+.nova-root[data-color-mode='light'] .text-emerald-200,
+.nova-root[data-color-mode='light'] .text-emerald-300 {
+  color: #08775b;
 }
 
 @media (max-width: 640px) {

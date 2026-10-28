@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Database, ShieldCheck, Sparkles } from 'lucide-react';
 import { NovaLogo } from './NovaLogo';
+import { DesktopWallpaper } from './DesktopWallpaper';
 import { WELCOME_KEY } from '../lib/preferences';
 import { usePreferences } from '../context/PreferencesContext';
 
-export function BootScreen({ onComplete }: { onComplete: () => void }) {
+export function BootScreen({ onComplete, wallpaperUrl }: { onComplete: () => void; wallpaperUrl?: string }) {
   const systemReducedMotion = useReducedMotion();
   const { preferences } = usePreferences();
   const reducedMotion = systemReducedMotion || preferences.reduceMotion;
@@ -37,7 +38,7 @@ export function BootScreen({ onComplete }: { onComplete: () => void }) {
 
   return (
     <main className="relative flex h-full min-h-screen items-center justify-center overflow-hidden p-5">
-      <div className="nova-wallpaper" />
+      <DesktopWallpaper imageUrl={wallpaperUrl} />
       {phase === 'boot' ? (
         <motion.section
           className="relative z-10 flex w-full max-w-sm flex-col items-center text-center"
@@ -52,9 +53,9 @@ export function BootScreen({ onComplete }: { onComplete: () => void }) {
           >
             <NovaLogo size="xl" />
           </motion.div>
-          <h1 className="mt-7 text-xl font-semibold tracking-[0.3em] text-white">NOVA</h1>
-          <p className="mt-2 text-[10px] font-medium tracking-[0.22em] text-white/40">BEYOND EARTH. BEYOND LIMITS.</p>
-          <div className="mt-9 h-0.5 w-48 overflow-hidden rounded-full bg-white/10">
+          <h1 className="mt-7 text-xl font-semibold tracking-[0.3em] text-ink">NOVA</h1>
+          <p className="mt-2 text-[10px] font-medium tracking-[0.22em] text-ink/40">BEYOND EARTH. BEYOND LIMITS.</p>
+          <div className="mt-9 h-0.5 w-48 overflow-hidden rounded-full bg-ink/10">
             <motion.div
               className="h-full rounded-full bg-gradient-to-r from-nova-cyan via-nova-blue to-nova-violet"
               initial={{ width: '0%' }}
@@ -62,8 +63,8 @@ export function BootScreen({ onComplete }: { onComplete: () => void }) {
               transition={{ duration: reducedMotion ? 0 : 1.15, ease: 'easeInOut' }}
             />
           </div>
-          <p className="mt-4 text-xs text-white/45">Preparing your local universe…</p>
-          <button className="mt-8 text-xs text-white/35 transition-colors hover:text-white/70" onClick={onComplete}>Skip startup</button>
+          <p className="mt-4 text-xs text-ink/45">Preparing your local universe…</p>
+          <button className="mt-8 text-xs text-ink/35 transition-colors hover:text-ink/70" onClick={onComplete}>Skip startup</button>
         </motion.section>
       ) : (
         <motion.section
@@ -79,10 +80,10 @@ export function BootScreen({ onComplete }: { onComplete: () => void }) {
               <NovaLogo size="lg" />
               <div>
                 <p className="eyebrow">WELCOME TO NOVA</p>
-                <h1 id="welcome-title" className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Your space. Your rules.</h1>
+                <h1 id="welcome-title" className="mt-1 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">Your space. Your rules.</h1>
               </div>
             </div>
-            <p className="mt-6 max-w-md text-sm leading-6 text-white/60">A calm, capable desktop that lives entirely in your browser. No account, no backend, and nothing to install.</p>
+            <p className="mt-6 max-w-md text-sm leading-6 text-ink/60">A calm, capable desktop that lives entirely in your browser. No account, no backend, and nothing to install.</p>
             <div className="mt-7 grid gap-3 sm:grid-cols-3">
               {[
                 { icon: Database, title: 'Local-first', text: 'Your data stays here' },
@@ -91,13 +92,13 @@ export function BootScreen({ onComplete }: { onComplete: () => void }) {
               ].map(({ icon: Icon, title, text }) => (
                 <div key={title} className="nova-card p-3.5">
                   <Icon size={17} className="accent-text" />
-                  <p className="mt-3 text-xs font-semibold text-white/85">{title}</p>
-                  <p className="mt-1 text-[11px] leading-4 text-white/40">{text}</p>
+                  <p className="mt-3 text-xs font-semibold text-ink/85">{title}</p>
+                  <p className="mt-1 text-[11px] leading-4 text-ink/40">{text}</p>
                 </div>
               ))}
             </div>
             <div className="mt-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-              <p className="text-[11px] text-white/35">Windows 10 · modern browser recommended</p>
+              <p className="text-[11px] text-ink/35">Windows 10 · modern browser recommended</p>
               <button className="nova-button w-full sm:w-auto" onClick={enterDesktop} autoFocus>
                 Enter desktop <ArrowRight size={16} />
               </button>

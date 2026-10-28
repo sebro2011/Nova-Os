@@ -12,12 +12,14 @@ export type AppId =
 
 export type ThemeName = 'cosmic' | 'midnight' | 'nebula';
 export type AccentName = 'blue' | 'violet' | 'cyan';
-export type WallpaperName = 'aurora' | 'orbit' | 'starlight';
+export type WallpaperName = 'aurora' | 'orbit' | 'starlight' | 'custom';
 
 export interface NovaPreferences {
+  colorMode: 'dark' | 'light';
   theme: ThemeName;
   accent: AccentName;
   wallpaper: WallpaperName;
+  customWallpaperId: string | null;
   reduceMotion: boolean;
   performanceMode: boolean;
   compactMode: boolean;
@@ -78,6 +80,22 @@ export interface BrowserHistoryEntry {
   visitedAt: string;
 }
 
+export interface BrowserBookmark {
+  id: string;
+  url: string;
+  title: string;
+  createdAt: string;
+}
+
+export interface WallpaperRecord {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  blob: Blob;
+  createdAt: string;
+}
+
 export interface NovaBackup {
   format: 'nova-web-os-backup';
   version: 1;
@@ -87,6 +105,7 @@ export interface NovaBackup {
   notes: Note[];
   events: CalendarEvent[];
   history: BrowserHistoryEntry[];
+  bookmarks: BrowserBookmark[];
 }
 
 export type NotificationTone = 'info' | 'success' | 'warning' | 'error';

@@ -108,7 +108,7 @@ export function WindowFrame({ window: item, focused, onFocus, onClose, onMinimiz
       onPointerDown={onFocus}
     >
       <div
-        className="window-titlebar flex h-12 shrink-0 cursor-default items-center gap-3 border-b border-white/[0.075] bg-white/[0.025] px-3"
+        className="window-titlebar flex h-12 shrink-0 cursor-default items-center gap-3 border-b border-ink/[0.075] bg-ink/[0.025] px-3"
         onPointerDown={beginDrag}
         onPointerMove={moveGesture}
         onPointerUp={endGesture}
@@ -119,7 +119,7 @@ export function WindowFrame({ window: item, focused, onFocus, onClose, onMinimiz
       >
         <span className="accent-surface flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"><Icon size={14} /></span>
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-xs font-semibold tracking-wide text-white/85">{definition.title}</h2>
+          <h2 className="truncate text-xs font-semibold tracking-wide text-ink/85">{definition.title}</h2>
         </div>
         <div className="flex items-center gap-0.5" data-window-control>
           <button className="icon-button h-8 w-8" onClick={onMinimize} aria-label={`Minimize ${definition.title}`} title="Minimize"><Minus size={14} /></button>
@@ -128,7 +128,7 @@ export function WindowFrame({ window: item, focused, onFocus, onClose, onMinimiz
         </div>
       </div>
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        <Suspense fallback={<div className="flex h-full items-center justify-center gap-2 text-xs text-white/45"><Loader2 size={17} className="animate-spin" /> Loading {definition.title}…</div>}>
+        <Suspense fallback={<div className="flex h-full items-center justify-center gap-2 text-xs text-ink/45"><Loader2 size={17} className="animate-spin" /> Loading {definition.title}…</div>}>
           <AppComponent />
         </Suspense>
       </div>

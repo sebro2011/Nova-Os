@@ -1,4 +1,4 @@
-import type { BrowserHistoryEntry, CalendarEvent, FileNode, Note, NovaBackup } from '../types';
+import type { BrowserBookmark, BrowserHistoryEntry, CalendarEvent, FileNode, Note, NovaBackup } from '../types';
 import { isValidDateKey } from './calendar';
 import { validateFileName } from './files';
 import { sanitizePreferences } from './preferences';
@@ -135,6 +135,24 @@ function validateHistory(value: unknown): BrowserHistoryEntry[] {
   });
 }
 
+function validateBookmarks(value: unknown): BrowserBookmark[] {
+  const ids = new Set<string>();
+  return array(value, 'Bookmarks', 2_000).map((item, index) => {
+    const input = record(item, `Bookmark ${index + 1}`);
+    const url = text(input.url, `Bookmark ${index + 1} URL`, 2_000, false);
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+      throw new Error(`Bookmark ${index + 1} contains an unsafe URL.`);
+    }
+    return {
+      id: uniqueId(input.id, ids, 'bookmark ID'),
+      url,
+      title: text(input.title, `Bookmark ${index + 1} title`, 200, false),
+      createdAt: isoDate(input.createdAt, `Bookmark ${index + 1} creation date`),
+    };
+  });
+}
+
 /** Validates and reconstructs a backup into fresh plain objects; no imported HTML is rendered. */
 export function validateBackup(value: unknown): NovaBackup {
   const input = record(value, 'Backup');
@@ -150,5 +168,6 @@ export function validateBackup(value: unknown): NovaBackup {
     notes: validateNotes(input.notes),
     events: validateEvents(input.events),
     history: validateHistory(input.history),
+    bookmarks: input.bookmarks === undefined ? [] : validateBookmarks(input.bookmarks),
   };
 }

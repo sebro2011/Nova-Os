@@ -9,9 +9,11 @@ const appIds: AppId[] = [
 ];
 
 export const defaultPreferences: NovaPreferences = {
+  colorMode: 'dark',
   theme: 'cosmic',
   accent: 'blue',
   wallpaper: 'aurora',
+  customWallpaperId: null,
   reduceMotion: false,
   performanceMode: false,
   compactMode: false,
@@ -30,15 +32,19 @@ export function sanitizePreferences(value: unknown): NovaPreferences {
     : defaultPreferences.dockPinned;
 
   return {
+    colorMode: value.colorMode === 'light' ? 'light' : defaultPreferences.colorMode,
     theme: ['cosmic', 'midnight', 'nebula'].includes(String(value.theme))
       ? value.theme as NovaPreferences['theme']
       : defaultPreferences.theme,
     accent: ['blue', 'violet', 'cyan'].includes(String(value.accent))
       ? value.accent as NovaPreferences['accent']
       : defaultPreferences.accent,
-    wallpaper: ['aurora', 'orbit', 'starlight'].includes(String(value.wallpaper))
+    wallpaper: ['aurora', 'orbit', 'starlight', 'custom'].includes(String(value.wallpaper))
       ? value.wallpaper as NovaPreferences['wallpaper']
       : defaultPreferences.wallpaper,
+    customWallpaperId: typeof value.customWallpaperId === 'string' && value.customWallpaperId.length <= 140
+      ? value.customWallpaperId
+      : null,
     reduceMotion: typeof value.reduceMotion === 'boolean' ? value.reduceMotion : defaultPreferences.reduceMotion,
     performanceMode: typeof value.performanceMode === 'boolean' ? value.performanceMode : defaultPreferences.performanceMode,
     compactMode: typeof value.compactMode === 'boolean' ? value.compactMode : defaultPreferences.compactMode,
