@@ -1,9 +1,9 @@
-import type { BrowserHistoryEntry, CalendarEvent, FileNode, Note } from '../types';
+import type { BrowserBookmark, BrowserHistoryEntry, CalendarEvent, FileNode, Note } from '../types';
 
 const DATABASE_NAME = 'nova-web-os';
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
-export type StoreName = 'files' | 'notes' | 'events' | 'history' | 'meta';
+export type StoreName = 'files' | 'notes' | 'events' | 'history' | 'bookmarks' | 'wallpapers' | 'meta';
 
 interface MetaRecord {
   key: string;
@@ -15,6 +15,7 @@ export interface DatabaseSnapshot {
   notes: Note[];
   events: CalendarEvent[];
   history: BrowserHistoryEntry[];
+  bookmarks: BrowserBookmark[];
 }
 
 let databasePromise: Promise<IDBDatabase> | undefined;
@@ -39,6 +40,8 @@ function openDatabase(): Promise<IDBDatabase> {
         store.createIndex('date', 'date', { unique: false });
       }
       if (!database.objectStoreNames.contains('history')) database.createObjectStore('history', { keyPath: 'id' });
+      if (!database.objectStoreNames.contains('bookmarks')) database.createObjectStore('bookmarks', { keyPath: 'id' });
+      if (!database.objectStoreNames.contains('wallpapers')) database.createObjectStore('wallpapers', { keyPath: 'id' });
       if (!database.objectStoreNames.contains('meta')) database.createObjectStore('meta', { keyPath: 'key' });
     };
     request.onsuccess = () => {
@@ -113,6 +116,13 @@ export async function deleteRecords(storeName: StoreName, keys: string[]): Promi
   await transactionDone(transaction);
 }
 
+export async function clearStore(storeName: StoreName): Promise<void> {
+  const database = await openDatabase();
+  const transaction = database.transaction(storeName, 'readwrite');
+  transaction.objectStore(storeName).clear();
+  await transactionDone(transaction);
+}
+
 const seedTime = '2026-01-01T00:00:00.000Z';
 const seedFiles: FileNode[] = [
   { id: 'root', parentId: null, name: 'NOVA', kind: 'folder', content: '', mimeType: '', createdAt: seedTime, updatedAt: seedTime, trashed: false },
@@ -141,19 +151,20 @@ export async function initializeDatabase(): Promise<void> {
 }
 
 export async function getDatabaseSnapshot(): Promise<DatabaseSnapshot> {
-  const [files, notes, events, history] = await Promise.all([
+  const [files, notes, events, history, bookmarks] = await Promise.all([
     getAllRecords<FileNode>('files'),
     getAllRecords<Note>('notes'),
     getAllRecords<CalendarEvent>('events'),
     getAllRecords<BrowserHistoryEntry>('history'),
+    getAllRecords<BrowserBookmark>('bookmarks'),
   ]);
-  return { files, notes, events, history };
+  return { files, notes, events, history, bookmarks };
 }
 
 export async function replaceDatabaseSnapshot(snapshot: DatabaseSnapshot): Promise<void> {
   const database = await openDatabase();
-  const transaction = database.transaction(['files', 'notes', 'events', 'history', 'meta'], 'readwrite');
-  (['files', 'notes', 'events', 'history'] as const).forEach((storeName) => {
+  const transaction = database.transaction(['files', 'notes', 'events', 'history', 'bookmarks', 'meta'], 'readwrite');
+  (['files', 'notes', 'events', 'history', 'bookmarks'] as const).forEach((storeName) => {
     const store = transaction.objectStore(storeName);
     store.clear();
     snapshot[storeName].forEach((record) => store.put(record));

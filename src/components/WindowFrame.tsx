@@ -8,6 +8,7 @@ import type { NovaWindow, WindowBounds } from '../types';
 
 interface WindowFrameProps {
   window: NovaWindow;
+  mobile: boolean;
   focused: boolean;
   onFocus: () => void;
   onClose: () => void;
@@ -26,7 +27,7 @@ type Gesture = {
 
 const resizeDirections = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
 
-export function WindowFrame({ window: item, focused, onFocus, onClose, onMinimize, onToggleMaximize, onBoundsChange }: WindowFrameProps) {
+export function WindowFrame({ window: item, mobile, focused, onFocus, onClose, onMinimize, onToggleMaximize, onBoundsChange }: WindowFrameProps) {
   const frameRef = useRef<HTMLElement>(null);
   const gesture = useRef<Gesture | null>(null);
   const systemReducedMotion = useReducedMotion();
@@ -38,14 +39,14 @@ export function WindowFrame({ window: item, focused, onFocus, onClose, onMinimiz
   const workspaceRect = () => frameRef.current?.parentElement?.getBoundingClientRect();
 
   const beginDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || item.maximized || (event.target as HTMLElement).closest('[data-window-control]')) return;
+    if (mobile || event.button !== 0 || item.maximized || (event.target as HTMLElement).closest('[data-window-control]')) return;
     onFocus();
     gesture.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, bounds: { x: item.x, y: item.y, width: item.width, height: item.height } };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const beginResize = (event: ReactPointerEvent<HTMLDivElement>, direction: string) => {
-    if (event.button !== 0 || item.maximized) return;
+    if (mobile || event.button !== 0 || item.maximized) return;
     event.stopPropagation();
     onFocus();
     gesture.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, direction, bounds: { x: item.x, y: item.y, width: item.width, height: item.height } };
@@ -88,16 +89,19 @@ export function WindowFrame({ window: item, focused, onFocus, onClose, onMinimiz
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
-  const style = item.maximized
-    ? { left: 8, top: 8, width: 'calc(100% - 16px)', height: 'calc(100% - 16px)', zIndex: item.zIndex }
-    : { left: item.x, top: item.y, width: item.width, height: item.height, zIndex: item.zIndex };
+  const style = mobile
+    ? { left: 0, top: 0, width: '100%', height: '100%', zIndex: item.zIndex }
+    : item.maximized
+      ? { left: 8, top: 8, width: 'calc(100% - 16px)', height: 'calc(100% - 16px)', zIndex: item.zIndex }
+      : { left: item.x, top: item.y, width: item.width, height: item.height, zIndex: item.zIndex };
 
   return (
     <motion.section
       ref={frameRef}
-      className="window-frame absolute flex flex-col"
+      className={`window-frame absolute flex flex-col ${mobile ? 'mobile-window' : ''}`}
       style={style}
       data-focused={focused}
+      data-mobile={mobile}
       role="dialog"
       aria-modal="false"
       aria-label={definition.title}
@@ -108,31 +112,31 @@ export function WindowFrame({ window: item, focused, onFocus, onClose, onMinimiz
       onPointerDown={onFocus}
     >
       <div
-        className="window-titlebar flex h-12 shrink-0 cursor-default items-center gap-3 border-b border-white/[0.075] bg-white/[0.025] px-3"
+        className="window-titlebar flex h-12 shrink-0 cursor-default items-center gap-3 border-b border-ink/[0.075] bg-ink/[0.025] px-3"
         onPointerDown={beginDrag}
         onPointerMove={moveGesture}
         onPointerUp={endGesture}
         onPointerCancel={endGesture}
         onDoubleClick={(event) => {
-          if (!(event.target as HTMLElement).closest('[data-window-control]')) onToggleMaximize();
+          if (!mobile && !(event.target as HTMLElement).closest('[data-window-control]')) onToggleMaximize();
         }}
       >
         <span className="accent-surface flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"><Icon size={14} /></span>
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-xs font-semibold tracking-wide text-white/85">{definition.title}</h2>
+          <h2 className="truncate text-xs font-semibold tracking-wide text-ink/85">{definition.title}</h2>
         </div>
         <div className="flex items-center gap-0.5" data-window-control>
           <button className="icon-button h-8 w-8" onClick={onMinimize} aria-label={`Minimize ${definition.title}`} title="Minimize"><Minus size={14} /></button>
-          <button className="icon-button h-8 w-8" onClick={onToggleMaximize} aria-label={item.maximized ? `Restore ${definition.title}` : `Maximize ${definition.title}`} title={item.maximized ? 'Restore' : 'Maximize'}><Square size={12} /></button>
+          {!mobile && <button className="icon-button h-8 w-8" onClick={onToggleMaximize} aria-label={item.maximized ? `Restore ${definition.title}` : `Maximize ${definition.title}`} title={item.maximized ? 'Restore' : 'Maximize'}><Square size={12} /></button>}
           <button className="icon-button h-8 w-8 hover:!bg-red-400/15 hover:!text-red-200" onClick={onClose} aria-label={`Close ${definition.title}`} title="Close"><X size={15} /></button>
         </div>
       </div>
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        <Suspense fallback={<div className="flex h-full items-center justify-center gap-2 text-xs text-white/45"><Loader2 size={17} className="animate-spin" /> Loading {definition.title}…</div>}>
+        <Suspense fallback={<div className="flex h-full items-center justify-center gap-2 text-xs text-ink/45"><Loader2 size={17} className="animate-spin" /> Loading {definition.title}…</div>}>
           <AppComponent />
         </Suspense>
       </div>
-      {!item.maximized && resizeDirections.map((direction) => {
+      {!mobile && !item.maximized && resizeDirections.map((direction) => {
         const positioning: Record<string, string> = {
           n: 'left-3 right-3 top-0 h-1.5 cursor-ns-resize', s: 'bottom-0 left-3 right-3 h-1.5 cursor-ns-resize',
           e: 'bottom-3 right-0 top-3 w-1.5 cursor-ew-resize', w: 'bottom-3 left-0 top-3 w-1.5 cursor-ew-resize',

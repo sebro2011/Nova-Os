@@ -7,7 +7,7 @@ const now = new Date().toISOString();
 const root: FileNode = { id: 'root', parentId: null, name: 'NOVA', kind: 'folder', content: '', mimeType: '', createdAt: now, updatedAt: now, trashed: false };
 
 function backup(): NovaBackup {
-  return { format: 'nova-web-os-backup', version: 1, exportedAt: now, preferences: { ...defaultPreferences }, files: [root], notes: [], events: [], history: [] };
+  return { format: 'nova-web-os-backup', version: 1, exportedAt: now, preferences: { ...defaultPreferences }, files: [root], notes: [], events: [], history: [], bookmarks: [] };
 }
 
 describe('backup validation', () => {
@@ -33,6 +33,14 @@ describe('backup validation', () => {
     expect(validateBackup(duplicate)).toBeDefined(); // IDs are scoped per collection.
     const invalidEvent = { ...backup(), events: [{ id: 'event', title: 'Invalid', date: '2026-02-30', time: '', details: '', createdAt: now }] };
     expect(() => validateBackup(invalidEvent)).toThrow('invalid date');
+  });
+
+  it('accepts legacy backups without bookmarks and rejects unsafe bookmark URLs', () => {
+    const legacy = backup() as Partial<NovaBackup>;
+    delete legacy.bookmarks;
+    expect(validateBackup(legacy).bookmarks).toEqual([]);
+    const unsafe = { ...backup(), bookmarks: [{ id: 'bookmark', url: 'data:text/html,unsafe', title: 'Unsafe', createdAt: now }] };
+    expect(() => validateBackup(unsafe)).toThrow('unsafe URL');
   });
 
   it('does not render or execute imported HTML-like text', () => {

@@ -29,8 +29,8 @@ export function ToastViewport() {
             >
               <Icon size={18} className={`mt-0.5 shrink-0 ${toneColors[notification.tone]}`} />
               <div className="min-w-0 flex-1">
-                <h3 className="text-xs font-semibold text-white/90">{notification.title}</h3>
-                <p className="mt-1 text-[11px] leading-4 text-white/50">{notification.message}</p>
+                <h3 className="text-xs font-semibold text-ink/90">{notification.title}</h3>
+                <p className="mt-1 text-[11px] leading-4 text-ink/50">{notification.message}</p>
               </div>
               <button className="icon-button -mr-1 -mt-1 h-7 w-7" onClick={() => dismissToast(notification.id)} aria-label="Dismiss notification"><X size={13} /></button>
             </motion.section>

@@ -16,6 +16,11 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [storageError, setStorageError] = useState('');
 
   useEffect(() => {
+    document.documentElement.style.colorScheme = preferences.colorMode;
+    document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute(
+      'content',
+      preferences.colorMode === 'light' ? '#edf2fa' : '#070913',
+    );
     try {
       savePreferences(preferences);
       setStorageError('');
