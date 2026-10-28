@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { Activity, ArrowUpRight, Cpu, Gauge, Moon, Wifi, WifiOff } from 'lucide-react';
+import { Activity, ArrowUpRight, Cpu, Gauge, Moon, Sun, Wifi, WifiOff } from 'lucide-react';
 import { usePreferences } from '../context/PreferencesContext';
 
 export function QuickSettings({ onClose, onOpenSettings }: { onClose: () => void; onOpenSettings: () => void }) {
@@ -10,7 +10,7 @@ export function QuickSettings({ onClose, onOpenSettings }: { onClose: () => void
   return (
     <div className="fixed inset-0 z-[10000]" onClick={onClose}>
       <motion.section
-        className="glass-panel absolute right-3 top-[52px] w-[min(340px,calc(100vw-24px))] p-4"
+        className="glass-panel shell-popover tray-panel app-scroll absolute right-3 top-[52px] w-[min(340px,calc(100vw-24px))] overflow-y-auto p-4"
         initial={systemReducedMotion || preferences.reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         onClick={(event) => event.stopPropagation()}
@@ -19,6 +19,9 @@ export function QuickSettings({ onClose, onOpenSettings }: { onClose: () => void
       >
         <div className="flex items-center justify-between"><div><p className="eyebrow">CONTROL DECK</p><h2 className="mt-1 text-sm font-semibold">Quick settings</h2></div><button className="icon-button" onClick={onOpenSettings} aria-label="Open all settings"><ArrowUpRight size={16} /></button></div>
         <div className="mt-4 grid grid-cols-2 gap-2">
+          <button className="nova-card p-3 text-left transition-colors hover:bg-ink/[0.06]" onClick={() => updatePreferences({ colorMode: preferences.colorMode === 'dark' ? 'light' : 'dark' })}>
+            {preferences.colorMode === 'dark' ? <Sun size={17} className="accent-text" /> : <Moon size={17} className="accent-text" />}<p className="mt-3 text-xs font-medium">Appearance</p><p className="mt-1 text-[10px] text-ink/35">Switch to {preferences.colorMode === 'dark' ? 'light' : 'dark'} mode</p>
+          </button>
           <button className="nova-card p-3 text-left transition-colors hover:bg-ink/[0.06]" data-active={preferences.performanceMode} onClick={() => updatePreferences({ performanceMode: !preferences.performanceMode })} aria-pressed={preferences.performanceMode}>
             <Gauge size={17} className={preferences.performanceMode ? 'accent-text' : 'text-ink/50'} /><p className="mt-3 text-xs font-medium">Performance</p><p className="mt-1 text-[10px] text-ink/35">{preferences.performanceMode ? 'Reduced effects' : 'Full glass effects'}</p>
           </button>

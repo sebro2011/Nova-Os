@@ -6,6 +6,7 @@ import { LaunchProvider } from '../context/LaunchContext';
 import { useNotifications } from '../context/NotificationContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useWindowManager } from '../hooks/useWindowManager';
+import { usePhoneLayout } from '../hooks/useMediaQuery';
 import { getRecord, initializeDatabase } from '../lib/db';
 import { errorMessage } from '../lib/utils';
 import type { AppId, WallpaperRecord } from '../types';
@@ -39,6 +40,7 @@ export function DesktopShell() {
   const storageAttempted = useRef(false);
   const { preferences } = usePreferences();
   const { notify } = useNotifications();
+  const isPhone = usePhoneLayout();
   const {
     windows, activeWindow, openApp, closeWindow, closeActiveWindow,
     minimizeWindow, toggleMaximize, focusWindow, updateBounds,
@@ -141,6 +143,7 @@ export function DesktopShell() {
         data-wallpaper={preferences.wallpaper}
         data-reduced-motion={preferences.reduceMotion}
         data-performance={preferences.performanceMode}
+        data-phone-layout={isPhone}
       >
         <a href="#desktop-workspace" className="sr-only-focusable fixed left-3 top-3 z-[13000] rounded-lg bg-white px-3 py-2 text-xs text-black">Skip to desktop</a>
         <DesktopWallpaper imageUrl={customWallpaperUrl} />
@@ -155,7 +158,7 @@ export function DesktopShell() {
         />
 
         <div id="desktop-workspace" ref={workspaceRef} className="relative min-h-0 flex-1 overflow-hidden" tabIndex={-1}>
-          <div className="absolute left-3 top-4 grid grid-cols-1 gap-1 sm:left-5 sm:top-6">
+          <div className={isPhone ? 'phone-desktop-icons absolute inset-x-2 top-3 grid grid-cols-3 gap-1' : 'absolute left-3 top-4 grid grid-cols-1 gap-1 sm:left-5 sm:top-6'}>
             {desktopIcons.map(({ appId, label, icon: Icon }) => (
               <button
                 key={appId}
@@ -163,7 +166,7 @@ export function DesktopShell() {
                 onClick={(event) => openFromDesktop(event, appId)}
                 onDoubleClick={() => openApp(appId)}
                 aria-label={`Open ${label}`}
-                title={`Double-click to open ${label}`}
+                title={isPhone ? `Tap to open ${label}` : `Double-click to open ${label}`}
               >
                 <span className="accent-surface flex h-11 w-11 items-center justify-center rounded-[14px] shadow-lg"><Icon size={22} strokeWidth={1.6} /></span>
                 <span>{label}</span>
@@ -184,6 +187,7 @@ export function DesktopShell() {
               <WindowFrame
                 key={item.id}
                 window={item}
+                mobile={isPhone}
                 focused={activeWindow?.id === item.id}
                 onFocus={() => focusWindow(item.id)}
                 onClose={() => closeWindow(item.id)}

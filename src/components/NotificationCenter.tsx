@@ -19,7 +19,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[10000]" onClick={onClose}>
       <motion.section
-        className="glass-panel absolute right-3 top-[52px] flex max-h-[calc(100dvh-140px)] w-[min(370px,calc(100vw-24px))] flex-col overflow-hidden"
+        className="glass-panel shell-popover tray-panel absolute right-3 top-[52px] flex max-h-[calc(100dvh-140px)] w-[min(370px,calc(100vw-24px))] flex-col overflow-hidden"
         initial={systemReducedMotion || preferences.reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         onClick={(event) => event.stopPropagation()}

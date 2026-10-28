@@ -12,6 +12,7 @@ A lightweight, responsive, local-first desktop environment that runs entirely in
 - Cosmic Dark and bright light modes with Liquid Glass-inspired surfaces, three themes, three accents, three built-in wallpapers, and custom image uploads
 - Desktop icons, app launcher, dock, taskbar, system tray, clock, quick settings, and notification center
 - Multi-window manager with focus, drag, eight-direction resize, minimize, maximize/restore, and close
+- **Mobile phone layout:** edge-to-edge app windows, portrait/landscape adaptation, safe-area support, larger touch controls, mobile browser menus, and touch-friendly Files navigation
 - Global search across apps, virtual files, notes, and events (`Ctrl + K`)
 - **Files:** virtual folders and plain-text files, rename, safe Trash/restore, permanent-delete confirmation, text import, and download
 - **NOVA Browser:** up to eight session tabs, persistent bookmarks, HTTP/HTTPS navigation, search, back/forward, clearable local history, sandboxed frames, and external-tab fallback
@@ -44,7 +45,7 @@ A lightweight, responsive, local-first desktop environment that runs entirely in
 
 - Node.js 22.12 or newer (current Node 22 LTS recommended)
 - npm 10 or newer
-- A current Chrome, Edge, Firefox, or similar modern browser
+- A current Chrome, Edge, Firefox, Safari, or similar modern browser on desktop or mobile
 
 ### Install and run
 
@@ -103,6 +104,17 @@ Nova-Os/
 └── vercel.json
 ```
 
+## Phone and touch use
+
+- Below 768 px—and on coarse-pointer phones in short landscape orientation—apps use the full workspace instead of floating desktop windows. Rotation and media-query changes are handled without resetting app state.
+- Tap a desktop icon once to open it. In Files, tap an item once to select it and tap it again to open it; mobile Places navigation keeps Home, All files, and Trash accessible.
+- Use an app's minimize control to return to the desktop. The phone dock prioritizes running apps and shows up to four alongside the launcher; every app remains available through the launcher.
+- NOVA Browser uses a compact address/toolbar layout. Its **More** menu retains Home, Bookmarks, and **Open in a new browser tab** actions on narrow screens.
+- Safe-area insets protect controls from notches and home indicators. Dynamic viewport units, scrollable overlays, 44 px coarse-pointer controls, and 16 px phone form fields improve keyboard and touch usability.
+- Desktop-sized screens retain the original movable, resizable, multi-window interface.
+
+Mobile browser chrome and virtual keyboards still reduce the available workspace. Add-to-home-screen behavior is controlled by the host browser; NOVA does not include a native mobile package or an offline service worker.
+
 ## Keyboard shortcuts
 
 | Shortcut | Action |
@@ -157,15 +169,17 @@ No application is automatically secure against malicious browser extensions, a c
 - Reduced motion respects both the operating system preference and NOVA settings
 - Semantic controls, visible focus indicators, labels, keyboard navigation, and status announcements are included
 - Responsive layouts adapt windows, navigation, app sidebars, and dialogs for smaller screens
+- Phone windows remove unnecessary drag/resize gestures and backdrop blur; the dock, desktop icons, panels, and browser controls use touch-specific layouts
+- The browser theme-color metadata follows NOVA's light/dark preference for a more consistent mobile browser frame
 
 For the target Windows 10 PC (Intel Core i5-3330, 8 GB RAM, GTX 960 2 GB), use a current hardware-accelerated browser and enable **Performance mode** if transparency feels expensive. Actual performance depends on browser version, extensions, open tabs, and the number/size of open windows and media files.
 
 ## Verification
 
-Executed during initial implementation:
+Executed for the current implementation:
 
 - `npm run typecheck` — passed
-- `npm test` — **8 test files, 27 tests passed** (including window-manager, preference-migration, and backup-validation regressions)
+- `npm test` — **10 test files, 31 tests passed** (including responsive window-frame, media-query, window-manager, preference-migration, and backup-validation regressions)
 - `npm run build` — passed; static output generated successfully
 - `npm audit` — **0 dependency vulnerabilities reported** after upgrading to Vite 8.3.5 and Vitest 5.0.5
 - Source scan — no dangerous HTML injection, `eval`, `Function` constructor, or shell-execution APIs in application source
@@ -183,6 +197,7 @@ These results describe the checks actually run in the implementation environment
 - The terminal is intentionally simulated and restricted; it cannot run CMD, PowerShell, Bash, packages, or user code.
 - Hardware performance gauges are simulated, not genuine Task Manager telemetry.
 - Notifications are session-only; there is no push service, cloud sync, account system, or multi-device synchronization.
+- NOVA is not a native Android/iOS package and has no offline service worker. Add-to-home-screen and standalone-display behavior varies by browser.
 - One window instance per built-in app is currently used; multiple different apps can be arranged simultaneously.
 
 ## Deploy to Vercel

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, Bookmark, Clock3, ExternalLink, Globe2, Home,
-  LockKeyhole, Plus, RotateCw, Search, ShieldCheck, Star, Trash2, X,
+  LockKeyhole, MoreHorizontal, Plus, RotateCw, Search, ShieldCheck, Star, Trash2, X,
 } from 'lucide-react';
 import { useNotifications } from '../context/NotificationContext';
 import { clearStore, deleteRecord, getAllRecords, initializeDatabase, putRecord } from '../lib/db';
@@ -34,7 +34,7 @@ export default function BrowserApp() {
   const [address, setAddress] = useState('');
   const [frameKey, setFrameKey] = useState(0);
   const [error, setError] = useState('');
-  const [panel, setPanel] = useState<'history' | 'bookmarks' | null>(null);
+  const [panel, setPanel] = useState<'history' | 'bookmarks' | 'menu' | null>(null);
   const [history, setHistory] = useState<BrowserHistoryEntry[]>([]);
   const [bookmarks, setBookmarks] = useState<BrowserBookmark[]>([]);
   const { notify } = useNotifications();
@@ -174,7 +174,7 @@ export default function BrowserApp() {
 
   return (
     <div className="flex h-full flex-col bg-[var(--app-bg)]">
-      <div className="flex h-10 shrink-0 items-center gap-1 border-b border-ink/[0.06] bg-black/5 px-2 pt-1">
+      <div className="browser-tabbar flex h-10 shrink-0 items-center gap-1 border-b border-ink/[0.06] bg-black/5 px-2 pt-1">
         <div className="app-scroll flex min-w-0 flex-1 gap-1 overflow-x-auto" role="tablist" aria-label="Browser tabs">
           {tabs.map((tab) => <div key={tab.id} className={`flex h-8 min-w-28 max-w-48 flex-1 items-center rounded-t-lg border-b-2 ${tab.id === activeTab.id ? 'border-nova-blue bg-ink/[0.075]' : 'border-transparent text-ink/35 hover:bg-ink/[0.035]'}`}>
             <button className="flex h-full min-w-0 flex-1 items-center gap-2 px-2.5 text-left" onClick={() => { setActiveTabId(tab.id); setPanel(null); }} role="tab" aria-selected={tab.id === activeTab.id} aria-label={tab.url === HOME_URL ? 'New tab' : displayUrl(tab.url)}>
@@ -187,19 +187,21 @@ export default function BrowserApp() {
         <button className="icon-button h-7 w-7 shrink-0" onClick={addTab} aria-label="New browser tab" title="New tab"><Plus size={15} /></button>
       </div>
 
-      <div className="relative flex shrink-0 items-center gap-1 border-b border-ink/[0.06] bg-ink/[0.02] p-2">
+      <div className="relative flex shrink-0 flex-wrap items-center gap-0.5 border-b border-ink/[0.06] bg-ink/[0.02] p-2 sm:flex-nowrap sm:gap-1">
         <button className="icon-button h-8 w-8" onClick={() => go(activeTab.index - 1)} disabled={activeTab.index <= 0} aria-label="Back"><ArrowLeft size={15} /></button>
         <button className="icon-button h-8 w-8" onClick={() => go(activeTab.index + 1)} disabled={activeTab.index >= activeTab.stack.length - 1} aria-label="Forward"><ArrowRight size={15} /></button>
         <button className="icon-button h-8 w-8" onClick={reload} aria-label="Reload"><RotateCw size={14} className={activeTab.loading ? 'animate-spin' : ''} /></button>
         <button className="icon-button hidden h-8 w-8 sm:flex" onClick={() => void navigate(HOME_URL)} aria-label="NOVA Browser home"><Home size={14} /></button>
-        <form className="relative mx-1 min-w-0 flex-1" onSubmit={(event) => { event.preventDefault(); void navigate(address); }}>
+        <form className="relative order-first mb-1 w-full min-w-0 flex-none sm:order-none sm:mx-1 sm:mb-0 sm:w-auto sm:flex-1" onSubmit={(event) => { event.preventDefault(); void navigate(address); }}>
           <LockKeyhole size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-300/50" />
           <input className="nova-input !min-h-8 !rounded-full !py-1.5 !pl-8 !pr-9 !text-[11px]" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Search or enter an HTTPS address" aria-label="Address and search bar" autoCapitalize="off" autoComplete="off" spellCheck={false} />
           {address && <button type="button" className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-ink/30 hover:bg-ink/[0.06]" onClick={() => setAddress('')} aria-label="Clear address"><X size={12} /></button>}
         </form>
+        <span className="flex-1 sm:hidden" aria-hidden="true" />
         <button className={`icon-button h-8 w-8 ${activeBookmark ? 'text-amber-300' : ''}`} onClick={() => void toggleBookmark()} disabled={activeTab.url === HOME_URL} aria-label={activeBookmark ? 'Remove bookmark' : 'Bookmark this page'} title={activeBookmark ? 'Remove bookmark' : 'Bookmark'}><Star size={15} fill={activeBookmark ? 'currentColor' : 'none'} /></button>
         <button className="icon-button hidden h-8 w-8 sm:flex" data-active={panel === 'bookmarks'} onClick={() => setPanel((current) => current === 'bookmarks' ? null : 'bookmarks')} aria-label="Show bookmarks" aria-expanded={panel === 'bookmarks'}><Bookmark size={14} /></button>
         <button className="icon-button h-8 w-8" data-active={panel === 'history'} onClick={() => setPanel((current) => current === 'history' ? null : 'history')} aria-label="Browsing history" aria-expanded={panel === 'history'}><Clock3 size={15} /></button>
+        <button className="icon-button h-8 w-8 sm:hidden" data-active={panel === 'menu'} onClick={() => setPanel((current) => current === 'menu' ? null : 'menu')} aria-label="Browser menu" aria-expanded={panel === 'menu'}><MoreHorizontal size={17} /></button>
         <button className="icon-button hidden h-8 w-8 md:flex" onClick={openExternally} disabled={activeTab.url === HOME_URL} aria-label="Open in a new browser tab" title="Open externally"><ExternalLink size={14} /></button>
         {activeTab.loading && <span className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden"><span className="block h-full w-1/2 animate-pulse bg-gradient-to-r from-transparent via-nova-blue to-transparent" /></span>}
       </div>
@@ -230,9 +232,20 @@ export default function BrowserApp() {
         </>}
 
         {panel && <aside className="absolute inset-y-0 right-0 z-20 flex w-[min(330px,92%)] flex-col border-l border-ink/[0.08] bg-[var(--editor-bg)] shadow-2xl">
-          <div className="flex items-center border-b border-ink/[0.06] p-3"><div className="flex-1"><p className="eyebrow">{panel === 'history' ? 'LOCAL HISTORY' : 'SAVED PAGES'}</p><h3 className="mt-1 text-xs font-semibold">{panel === 'history' ? 'Recent addresses' : 'Bookmarks'}</h3></div>{panel === 'history' && <button className="icon-button" onClick={() => void clearHistory()} disabled={!history.length} aria-label="Clear browsing history"><Trash2 size={14} /></button>}<button className="icon-button" onClick={() => setPanel(null)} aria-label={`Close ${panel}`}><X size={15} /></button></div>
+          <div className="flex items-center border-b border-ink/[0.06] p-3">
+            <div className="flex-1">
+              <p className="eyebrow">{panel === 'history' ? 'LOCAL HISTORY' : panel === 'bookmarks' ? 'SAVED PAGES' : 'BROWSER MENU'}</p>
+              <h3 className="mt-1 text-xs font-semibold">{panel === 'history' ? 'Recent addresses' : panel === 'bookmarks' ? 'Bookmarks' : 'More actions'}</h3>
+            </div>
+            {panel === 'history' && <button className="icon-button" onClick={() => void clearHistory()} disabled={!history.length} aria-label="Clear browsing history"><Trash2 size={14} /></button>}
+            <button className="icon-button" onClick={() => setPanel(null)} aria-label={`Close ${panel}`}><X size={15} /></button>
+          </div>
           <div className="app-scroll min-h-0 flex-1 overflow-y-auto p-2">
-            {panel === 'history' ? <>
+            {panel === 'menu' ? <nav className="space-y-1" aria-label="Additional browser actions">
+              <button className="flex w-full items-center gap-3 rounded-lg p-3 text-left text-xs text-ink/65 hover:bg-ink/[0.04]" onClick={() => void navigate(HOME_URL)}><Home size={16} className="accent-text" />NOVA Browser home</button>
+              <button className="flex w-full items-center gap-3 rounded-lg p-3 text-left text-xs text-ink/65 hover:bg-ink/[0.04]" onClick={() => setPanel('bookmarks')}><Bookmark size={16} className="accent-text" />Bookmarks<span className="ml-auto text-[10px] text-ink/30">{bookmarks.length}</span></button>
+              <button className="flex w-full items-center gap-3 rounded-lg p-3 text-left text-xs text-ink/65 hover:bg-ink/[0.04]" onClick={() => { setPanel(null); openExternally(); }} disabled={activeTab.url === HOME_URL}><ExternalLink size={16} className="accent-text" />Open in a new browser tab</button>
+            </nav> : panel === 'history' ? <>
               {history.map((entry) => <button key={entry.id} className="w-full rounded-lg p-2.5 text-left hover:bg-ink/[0.04]" onClick={() => void navigate(entry.url)}><span className="block truncate text-xs text-ink/65">{entry.title}</span><span className="mt-1 block text-[9px] text-ink/25">{formatDateTime(entry.visitedAt)}</span></button>)}
               {!history.length && <p className="p-8 text-center text-xs text-ink/30">No local history yet.</p>}
             </> : <>
@@ -240,7 +253,7 @@ export default function BrowserApp() {
               {!bookmarks.length && <div className="p-8 text-center"><Star size={22} className="mx-auto text-ink/15" /><p className="mt-3 text-xs text-ink/30">No bookmarks yet.</p><p className="mt-1.5 text-[10px] text-ink/20">Use the star in the address bar to save a page.</p></div>}
             </>}
           </div>
-          <p className="border-t border-ink/[0.055] p-3 text-[9px] leading-4 text-ink/25">{panel === 'history' ? 'Only submitted addresses are recorded. History is stored locally and can be cleared here.' : 'Bookmarks persist in IndexedDB and are included in NOVA JSON backups.'}</p>
+          {panel !== 'menu' && <p className="border-t border-ink/[0.055] p-3 text-[9px] leading-4 text-ink/25">{panel === 'history' ? 'Only submitted addresses are recorded. History is stored locally and can be cleared here.' : 'Bookmarks persist in IndexedDB and are included in NOVA JSON backups.'}</p>}
         </aside>}
       </div>
     </div>

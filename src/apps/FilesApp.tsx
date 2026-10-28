@@ -7,6 +7,7 @@ import { AppError, AppLoading } from '../components/AppStates';
 import { useNotifications } from '../context/NotificationContext';
 import { deleteRecords, getAllRecords, initializeDatabase, putRecord, putRecords } from '../lib/db';
 import { getDescendantIds, getFolderPath, validateFileName } from '../lib/files';
+import { usePhoneLayout } from '../hooks/useMediaQuery';
 import { createId, downloadTextFile, errorMessage, formatBytes, formatDateTime } from '../lib/utils';
 import type { FileNode } from '../types';
 
@@ -23,6 +24,7 @@ export default function FilesApp() {
   const [error, setError] = useState('');
   const uploadRef = useRef<HTMLInputElement>(null);
   const { notify } = useNotifications();
+  const isPhone = usePhoneLayout();
 
   const load = useCallback(async () => {
     setError('');
@@ -228,6 +230,13 @@ export default function FilesApp() {
           </div>
         </div>
 
+        <nav className="app-scroll flex h-11 shrink-0 items-center gap-1 overflow-x-auto border-b border-ink/[0.05] px-2 sm:hidden" aria-label="File places">
+          {[['home', 'Home', Home], ['root', 'All files', HardDrive], ['trash', 'Trash', Trash2]].map(([id, label, Icon]) => {
+            const PlaceIcon = Icon as typeof Home;
+            return <button key={id as string} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] ${currentFolderId === id ? 'bg-[rgba(var(--accent-rgb),0.12)] accent-text' : 'text-ink/45'}`} onClick={() => navigate(id as string)}><PlaceIcon size={13} />{label as string}</button>;
+          })}
+        </nav>
+
         <div className="flex h-10 items-center gap-1 overflow-x-auto border-b border-ink/[0.05] px-4 text-[11px] app-scroll">
           {currentFolderId === 'trash' ? <span className="flex items-center gap-2 text-ink/65"><Trash2 size={13} /> Trash</span> : breadcrumbs.map((folder, index) => <span key={folder.id} className="flex shrink-0 items-center gap-1">{index > 0 && <ChevronRight size={11} className="text-ink/20" />}<button className={`rounded px-1.5 py-1 hover:bg-ink/[0.05] ${index === breadcrumbs.length - 1 ? 'text-ink/75' : 'text-ink/35'}`} onClick={() => navigate(folder.id)}>{folder.name}</button></span>)}
           <span className="ml-auto shrink-0 text-[9px] text-ink/25">{visibleFiles.length} items</span>
@@ -239,16 +248,19 @@ export default function FilesApp() {
             {visibleFiles.map((file) => <button
               key={file.id}
               className={`grid w-full grid-cols-[1fr_auto] items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors sm:grid-cols-[1fr_150px_70px] ${selectedId === file.id ? 'bg-[rgba(var(--accent-rgb),0.11)]' : 'hover:bg-ink/[0.035]'}`}
-              onClick={() => setSelectedId(file.id)}
-              onDoubleClick={() => openItem(file)}
+              onClick={() => {
+                if (isPhone && selectedId === file.id) openItem(file);
+                else setSelectedId(file.id);
+              }}
+              onDoubleClick={() => { if (!isPhone) openItem(file); }}
               onKeyDown={(event) => { if (event.key === 'Enter') openItem(file); }}
-              aria-label={`${file.kind === 'folder' ? 'Folder' : 'File'} ${file.name}. Press Enter to open.`}
+              aria-label={`${file.kind === 'folder' ? 'Folder' : 'File'} ${file.name}. ${isPhone ? 'Tap to select, then tap again to open.' : 'Press Enter to open.'}`}
             >
               <span className="flex min-w-0 items-center gap-2.5">{file.kind === 'folder' ? <Folder size={17} className="accent-text shrink-0" /> : <FileText size={16} className="shrink-0 text-ink/35" />}<span className="truncate text-xs text-ink/70">{file.name}</span>{file.trashed && <span className="rounded bg-ink/[0.05] px-1 text-[8px] text-ink/30">TRASH</span>}</span>
               <span className="hidden text-[10px] text-ink/25 sm:block">{formatDateTime(file.updatedAt)}</span>
               <span className="text-right text-[10px] text-ink/25">{file.kind === 'folder' ? '—' : formatBytes(new Blob([file.content]).size)}</span>
             </button>)}
-            {visibleFiles.length === 0 && <div className="flex h-48 flex-col items-center justify-center text-center"><File size={26} className="text-ink/12" /><p className="mt-3 text-xs text-ink/40">{currentFolderId === 'trash' ? 'Trash is empty' : 'This folder is empty'}</p><p className="mt-1.5 text-[10px] text-ink/25">{currentFolderId === 'trash' ? 'Deleted items will wait here safely.' : 'Create a folder or plain-text file to begin.'}</p></div>}
+            {visibleFiles.length === 0 && <div className="flex h-48 flex-col items-center justify-center text-center"><File size={26} className="text-ink/12" /><p className="mt-3 text-xs text-ink/40">{currentFolderId === 'trash' ? 'Trash is empty' : 'This folder is empty'}</p><p className="mt-1.5 text-[10px] text-ink/25">{currentFolderId === 'trash' ? 'Deleted items will wait here safely.' : isPhone ? 'Create an item, then tap it twice to open.' : 'Create a folder or plain-text file to begin.'}</p></div>}
           </div>
 
           {editorFile && <aside className="absolute inset-0 z-10 flex flex-col bg-[var(--editor-bg)]">

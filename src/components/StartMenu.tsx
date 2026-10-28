@@ -15,7 +15,7 @@ export function StartMenu({ onClose, onOpen }: { onClose: () => void; onOpen: (a
   return (
     <div className="fixed inset-0 z-[10000]" onClick={onClose}>
       <motion.section
-        className="glass-panel absolute left-3 top-[52px] flex max-h-[calc(100dvh-140px)] w-[min(390px,calc(100vw-24px))] flex-col overflow-hidden !rounded-[22px]"
+        className="glass-panel shell-popover launcher-panel absolute left-3 top-[52px] flex max-h-[calc(100dvh-140px)] w-[min(390px,calc(100vw-24px))] flex-col overflow-hidden !rounded-[22px]"
         initial={systemReducedMotion || preferences.reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.16 }}

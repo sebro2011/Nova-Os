@@ -37,11 +37,11 @@ export function BootScreen({ onComplete, wallpaperUrl }: { onComplete: () => voi
   };
 
   return (
-    <main className="relative flex h-full min-h-screen items-center justify-center overflow-hidden p-5">
+    <main className="boot-screen app-scroll relative flex h-full min-h-full items-center justify-center overflow-y-auto p-5">
       <DesktopWallpaper imageUrl={wallpaperUrl} />
       {phase === 'boot' ? (
         <motion.section
-          className="relative z-10 flex w-full max-w-sm flex-col items-center text-center"
+          className="relative z-10 my-auto flex w-full max-w-sm flex-col items-center text-center"
           initial={reducedMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           aria-label="NOVA is starting"
@@ -68,7 +68,7 @@ export function BootScreen({ onComplete, wallpaperUrl }: { onComplete: () => voi
         </motion.section>
       ) : (
         <motion.section
-          className="glass-panel relative z-10 w-full max-w-xl overflow-hidden p-7 sm:p-10"
+          className="glass-panel relative z-10 my-auto w-full max-w-xl overflow-hidden p-7 sm:p-10"
           initial={reducedMotion ? false : { opacity: 0, y: 18, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.4 }}
@@ -98,7 +98,7 @@ export function BootScreen({ onComplete, wallpaperUrl }: { onComplete: () => voi
               ))}
             </div>
             <div className="mt-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-              <p className="text-[11px] text-ink/35">Windows 10 · modern browser recommended</p>
+              <p className="text-[11px] text-ink/35">Modern browser · desktop and mobile</p>
               <button className="nova-button w-full sm:w-auto" onClick={enterDesktop} autoFocus>
                 Enter desktop <ArrowRight size={16} />
               </button>

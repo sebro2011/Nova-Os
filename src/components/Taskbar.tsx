@@ -36,13 +36,13 @@ export function Taskbar({ activeTitle, expandedPanel, onStart, onSearch, onNotif
   const date = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(now);
 
   return (
-    <header className="desktop-topbar relative z-[500] flex h-11 shrink-0 items-center gap-2 border-b px-2.5 sm:px-3">
-      <button className="flex h-8 items-center gap-2 rounded-lg px-1.5 pr-2.5 transition-colors hover:bg-ink/[0.06]" onClick={onStart} aria-label="Open NOVA launcher" aria-expanded={expandedPanel === 'start'}>
+    <header className="desktop-topbar relative z-[500] flex h-11 shrink-0 items-center gap-1 border-b px-2.5 sm:gap-2 sm:px-3">
+      <button className="taskbar-launcher flex h-8 items-center gap-2 rounded-lg px-1.5 pr-2.5 transition-colors hover:bg-ink/[0.06]" onClick={onStart} aria-label="Open NOVA launcher" aria-expanded={expandedPanel === 'start'}>
         <NovaLogo size="sm" />
         <span className="hidden text-xs font-semibold tracking-[0.15em] text-ink/90 sm:inline">NOVA</span>
       </button>
-      <span className="h-4 w-px bg-ink/10" />
-      <p className="min-w-0 flex-1 truncate px-1 text-[11px] text-ink/45 sm:flex-none">{activeTitle ?? 'Desktop'}</p>
+      <span className="hidden h-4 w-px bg-ink/10 sm:block" />
+      <p className="hidden min-w-0 flex-1 truncate px-1 text-[11px] text-ink/45 sm:block sm:flex-none">{activeTitle ?? 'Desktop'}</p>
       <div className="hidden flex-1 items-center justify-center md:flex">
         <button className="flex h-7 w-64 items-center gap-2 rounded-lg border border-ink/[0.07] bg-black/10 px-3 text-left text-[11px] text-ink/35 transition-colors hover:border-ink/15 hover:text-ink/60" onClick={onSearch}>
           <Search size={12} /> Search your universe <kbd className="ml-auto rounded border border-ink/10 px-1 py-0.5 text-[9px]">Ctrl K</kbd>
@@ -58,7 +58,7 @@ export function Taskbar({ activeTitle, expandedPanel, onStart, onSearch, onNotif
           <Bell size={15} />
           {unreadCount > 0 && <span className="absolute right-1 top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-nova-blue px-0.5 text-[8px] font-bold text-ink">{Math.min(unreadCount, 9)}</span>}
         </button>
-        <button className="icon-button" onClick={() => updatePreferences({ colorMode: preferences.colorMode === 'dark' ? 'light' : 'dark' })} aria-label={`Switch to ${preferences.colorMode === 'dark' ? 'light' : 'dark'} mode`} title={`Switch to ${preferences.colorMode === 'dark' ? 'light' : 'dark'} mode`}>
+        <button className="taskbar-theme-button icon-button" onClick={() => updatePreferences({ colorMode: preferences.colorMode === 'dark' ? 'light' : 'dark' })} aria-label={`Switch to ${preferences.colorMode === 'dark' ? 'light' : 'dark'} mode`} title={`Switch to ${preferences.colorMode === 'dark' ? 'light' : 'dark'} mode`}>
           {preferences.colorMode === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
         </button>
         <button className="icon-button" onClick={onQuickSettings} aria-label="Quick settings" aria-expanded={expandedPanel === 'tray'}><ChevronUp size={15} /></button>
