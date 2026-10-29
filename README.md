@@ -15,7 +15,7 @@ A lightweight, responsive, local-first desktop environment that runs entirely in
 - **Mobile phone layout:** edge-to-edge app windows, portrait/landscape adaptation, safe-area support, larger touch controls, mobile browser menus, and touch-friendly Files navigation
 - Global search across apps, virtual files, notes, and events (`Ctrl + K`)
 - **Files:** virtual folders and plain-text files, rename, safe Trash/restore, permanent-delete confirmation, text import, and download
-- **NOVA Browser:** up to eight session tabs, persistent bookmarks, HTTP/HTTPS navigation, search, back/forward, clearable local history, sandboxed frames, and external-tab fallback
+- **NOVA Browser:** up to eight session tabs, persistent bookmarks, HTTP/HTTPS navigation, search, back/forward, clearable local history, sandboxed frames, an official privacy-enhanced YouTube player, and a dedicated external-only screen for Google Search
 - **Terminal:** a restricted custom command interpreter—not a system shell
 - **Notes:** local notes with debounced autosave
 - **Calculator:** keyboard-friendly arithmetic using a dedicated parser, with no `eval`
@@ -179,7 +179,7 @@ For the target Windows 10 PC (Intel Core i5-3330, 8 GB RAM, GTX 960 2 GB), use a
 Executed for the current implementation:
 
 - `npm run typecheck` — passed
-- `npm test` — **10 test files, 31 tests passed** (including responsive window-frame, media-query, window-manager, preference-migration, and backup-validation regressions)
+- `npm test` — **11 test files, 38 tests passed** (including YouTube player adaptation, Browser external-only/embedding, responsive window-frame, media-query, window-manager, preference-migration, and backup-validation regressions)
 - `npm run build` — passed; static output generated successfully
 - `npm audit` — **0 dependency vulnerabilities reported** after upgrading to Vite 8.3.5 and Vitest 5.0.5
 - Source scan — no dangerous HTML injection, `eval`, `Function` constructor, or shell-execution APIs in application source
@@ -189,7 +189,8 @@ These results describe the checks actually run in the implementation environment
 ## Known limitations
 
 - Browser storage is origin-specific and can be cleared by site-data controls, private browsing behavior, browser policy, or storage pressure. Persistent-storage requests are browser-decided and do not replace backups.
-- NOVA Browser is an interface inside the host browser, not a separate engine, VPN, or proxy. Many websites refuse framed embedding through `X-Frame-Options` or CSP. Use **Open externally**.
+- NOVA Browser is an interface inside the host browser, not a separate engine, VPN, or proxy. Many websites refuse framed embedding through `X-Frame-Options` or CSP. Google Search uses a dedicated external-only screen instead of rendering its blocked frame; use **Open externally** to continue in a normal browser tab. Other sites may also require external opening.
+- Supported YouTube watch, Shorts, live, and `youtu.be` links load through the official `youtube-nocookie.com` embed player. The original address remains in the address bar, local history/bookmarks, and **Open externally**. Individual videos may still disable embedding, require sign-in or age verification, or be unavailable in the current region.
 - Cross-origin browser rules prevent NOVA from reliably tracking navigation that occurs inside a framed site. Back/forward primarily covers addresses submitted through NOVA. Browser tabs are session-only and are not restored after a reload.
 - Custom wallpaper images are stored only in IndexedDB and are not included in JSON backups.
 - External pages have their own cookies, permissions, network requests, and privacy policies.

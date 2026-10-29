@@ -17,6 +17,49 @@ export function normalizeWebUrl(input: string): string {
   return url.toString();
 }
 
+/** Convert supported YouTube pages to their official privacy-enhanced player. */
+export function getYouTubeEmbedUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || parsed.username || parsed.password) return null;
+
+    const hostname = parsed.hostname.toLowerCase();
+    const isYoutube = hostname === 'youtube.com' || hostname === 'www.youtube.com' || hostname === 'm.youtube.com';
+    const isShortLink = hostname === 'youtu.be' || hostname === 'www.youtu.be';
+    const isPrivacyPlayer = hostname === 'youtube-nocookie.com' || hostname === 'www.youtube-nocookie.com';
+    let videoId: string | null = null;
+
+    if (isShortLink) {
+      videoId = parsed.pathname.match(/^\/([A-Za-z0-9_-]{11})\/?$/)?.[1] ?? null;
+    } else if (isYoutube && /^\/watch\/?$/.test(parsed.pathname)) {
+      videoId = parsed.searchParams.get('v');
+    } else if (isYoutube || isPrivacyPlayer) {
+      videoId = parsed.pathname.match(/^\/(?:shorts|embed|live)\/([A-Za-z0-9_-]{11})\/?$/)?.[1] ?? null;
+    }
+
+    if (!videoId || !/^[A-Za-z0-9_-]{11}$/.test(videoId)) return null;
+    return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&playsinline=1`;
+  } catch {
+    return null;
+  }
+}
+
+/** Known hard blocks only; other sites may still refuse framed embedding. */
+export function getEmbeddingRestriction(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    const hostname = parsed.hostname.toLowerCase();
+    const isGoogleSearch = (hostname === 'google.com' || hostname === 'www.google.com')
+      && parsed.pathname.replace(/\/+$/, '') === '/search';
+    return isGoogleSearch
+      ? 'Google Search does not allow other websites to embed its results.'
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function displayUrl(url: string): string {
   try {
     const parsed = new URL(url);
