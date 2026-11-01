@@ -13,6 +13,7 @@ import { downloadTextFile, errorMessage, formatBytes, toLocalDateKey } from '../
 import type { NovaBackup } from '../types';
 import { WallpaperPicker } from '../components/WallpaperPicker';
 import { useModalFocus } from '../hooks/useModalFocus';
+import { createRasterIconDataUrl } from '../lib/image';
 
 type Tab = 'appearance' | 'system' | 'data' | 'about';
 
@@ -24,6 +25,16 @@ function SettingsCard({ title, children }: { title: string; children: ReactNode 
   return <section className="nova-card p-4"><h3 className="text-xs font-semibold text-ink/75">{title}</h3><div className="mt-2 divide-y divide-ink/[0.05]">{children}</div></section>;
 }
 
+function SelectRow<T extends string>({ title, description, value, options, onChange }: {
+  title: string;
+  description: string;
+  value: T;
+  options: readonly { value: T; label: string }[];
+  onChange: (value: T) => void;
+}) {
+  return <div className="flex items-center gap-4 py-3"><div className="min-w-0 flex-1"><h4 className="text-xs font-medium text-ink/70">{title}</h4><p className="mt-1 text-[10px] leading-4 text-muted">{description}</p></div><select className="nova-input w-32 shrink-0 text-[11px]" aria-label={title} value={value} onChange={(event) => onChange(event.target.value as T)}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>;
+}
+
 export default function SettingsApp() {
   const [tab, setTab] = useState<Tab>('appearance');
   const [pendingImport, setPendingImport] = useState<NovaBackup | null>(null);
@@ -31,6 +42,8 @@ export default function SettingsApp() {
   const [busy, setBusy] = useState(false);
   const [storageInfo, setStorageInfo] = useState<{ usage: number; quota: number; persisted: boolean } | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
+  const cursorInputRef = useRef<HTMLInputElement>(null);
+  const [cursorBusy, setCursorBusy] = useState(false);
   const { preferences, updatePreferences, resetPreferences, storageError } = usePreferences();
   const { notify } = useNotifications();
   const { consumeLaunchIntent } = useLauncher();
@@ -89,7 +102,7 @@ export default function SettingsApp() {
   };
 
   const applyImport = async () => {
-    if (!pendingImport || !window.confirm('Replace current NOVA files, notes, events, history, bookmarks, and preferences with this backup? Export a current backup first if needed.')) return;
+    if (!pendingImport || !window.confirm('Replace the current NOVA data covered by this backup? Older backups without website shortcuts preserve your existing shortcuts. Export a current backup first if needed.')) return;
     setBusy(true);
     try {
       await replaceDatabaseSnapshot(pendingImport);
@@ -109,6 +122,20 @@ export default function SettingsApp() {
     }
   };
 
+  const uploadCursor = async (file?: File) => {
+    if (!file) return;
+    setCursorBusy(true);
+    try {
+      const customCursor = await createRasterIconDataUrl(file, 32);
+      updatePreferences({ customCursor, cursorStyle: 'custom' });
+      notify({ title: 'NOVA cursor applied', message: 'Your raster cursor was resized and saved locally.', tone: 'success' });
+    } catch (caught) {
+      notify({ title: 'Cursor not added', message: errorMessage(caught), tone: 'warning' });
+    } finally {
+      setCursorBusy(false);
+    }
+  };
+
   const requestPersistence = async () => {
     try {
       if (!navigator.storage?.persist) throw new Error('Persistent storage requests are not supported by this browser.');
@@ -120,6 +147,15 @@ export default function SettingsApp() {
     }
   };
 
+  const importCounts = pendingImport ? [
+    { label: 'Files', count: pendingImport.files.length },
+    { label: 'Notes', count: pendingImport.notes.length },
+    { label: 'Events', count: pendingImport.events.length },
+    { label: 'History', count: pendingImport.history.length },
+    { label: 'Bookmarks', count: pendingImport.bookmarks.length },
+    ...(pendingImport.websites ? [{ label: 'Websites', count: pendingImport.websites.length }] : []),
+  ] : [];
+
   const tabs = [
     { id: 'appearance' as const, label: 'Appearance', icon: Palette },
     { id: 'system' as const, label: 'System', icon: SlidersHorizontal },
@@ -129,9 +165,9 @@ export default function SettingsApp() {
 
   return (
     <div className="flex h-full bg-black/5">
-      <aside className="hidden w-44 shrink-0 flex-col border-r border-ink/[0.06] bg-black/10 p-3 sm:flex"><p className="eyebrow px-2 py-2">CONTROL DECK</p>{tabs.map(({ id, label, icon: Icon }) => <button key={id} className={`mt-1 flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[11px] transition-colors ${tab === id ? 'bg-[rgba(var(--accent-rgb),0.11)] accent-text' : 'text-muted hover:bg-ink/[0.035]'}`} onClick={() => setTab(id)}><Icon size={15} />{label}</button>)}<div className="mt-auto rounded-xl border border-ink/[0.055] p-3"><ShieldCheck size={16} className="text-emerald-300/55" /><p className="mt-2 text-[10px] font-medium text-ink/65">Local by default</p><p className="mt-1 text-[9px] leading-4 text-muted">No account. No backend. No tracking service.</p></div></aside>
+      <aside className="hidden w-44 shrink-0 flex-col border-r border-ink/[0.06] bg-black/10 p-3 sm:flex"><p className="eyebrow px-2 py-2">CONTROL DECK</p>{tabs.map(({ id, label, icon: Icon }) => <button key={id} className={`mt-1 flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[11px] transition-colors ${tab === id ? 'bg-[rgba(var(--accent-rgb),0.11)] accent-text' : 'text-muted hover:bg-ink/[0.035]'}`} onClick={() => setTab(id)} aria-pressed={tab === id}><Icon size={15} />{label}</button>)}<div className="mt-auto rounded-xl border border-ink/[0.055] p-3"><ShieldCheck size={16} className="text-emerald-300/55" /><p className="mt-2 text-[10px] font-medium text-ink/65">Local by default</p><p className="mt-1 text-[9px] leading-4 text-muted">No account. No backend. No tracking service.</p></div></aside>
       <div className="app-scroll min-w-0 flex-1 overflow-y-auto">
-        <nav className="flex gap-1 overflow-x-auto border-b border-ink/[0.06] p-2 sm:hidden" aria-label="Settings sections">{tabs.map(({ id, label }) => <button key={id} className={`shrink-0 rounded-lg px-3 py-2 text-[10px] ${tab === id ? 'bg-ink/[0.07] text-ink/75' : 'text-muted'}`} onClick={() => setTab(id)}>{label}</button>)}</nav>
+        <nav className="flex gap-1 overflow-x-auto border-b border-ink/[0.06] p-2 sm:hidden" aria-label="Settings sections">{tabs.map(({ id, label }) => <button key={id} className={`shrink-0 rounded-lg px-3 py-2 text-[10px] ${tab === id ? 'bg-ink/[0.07] text-ink/75' : 'text-muted'}`} onClick={() => setTab(id)} aria-pressed={tab === id}>{label}</button>)}</nav>
         <div className="mx-auto max-w-2xl p-4 sm:p-6">
           {storageError && <div className="mb-4 rounded-xl border border-red-300/15 bg-red-300/[0.05] p-3 text-[11px] text-red-200/70" role="alert">{storageError}</div>}
 
@@ -143,11 +179,35 @@ export default function SettingsApp() {
             ] as const).map(([id, label, gradient]) => <button key={id} className={`rounded-xl border p-2 text-left transition-colors ${preferences.theme === id ? 'border-[rgba(var(--accent-rgb),0.45)] bg-[rgba(var(--accent-rgb),0.08)]' : 'border-ink/[0.07] hover:bg-ink/[0.03]'}`} onClick={() => updatePreferences({ theme: id })} aria-pressed={preferences.theme === id}><span className={`block h-14 rounded-lg bg-gradient-to-br ${gradient} shadow-inner`}><span className="m-2 block h-1.5 w-1.5 rounded-full bg-ink/60" /></span><span className="mt-2 flex items-center px-1 text-[10px] text-ink/65">{label}{preferences.theme === id && <Check size={11} className="accent-text ml-auto" />}</span></button>)}</div></section>
             <section className="mt-5"><h3 className="text-xs font-medium text-ink/60">Accent</h3><div className="mt-2.5 flex gap-3">{([['blue', '#63a8ff'], ['violet', '#b39afa'], ['cyan', '#55e6e0']] as const).map(([id, color]) => <button key={id} className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border text-[10px] capitalize ${preferences.accent === id ? 'border-ink/25 bg-ink/[0.06] text-ink/75' : 'border-ink/[0.06] text-muted'}`} onClick={() => updatePreferences({ accent: id })} aria-pressed={preferences.accent === id}><span className="h-3 w-3 rounded-full" style={{ background: color, boxShadow: `0 0 10px ${color}55` }} />{id}</button>)}</div></section>
             <WallpaperPicker />
+            <div className="mt-5 space-y-3">
+              <SettingsCard title="Window material">
+                <ToggleRow title="Window transparency" description="Use layered glass behind desktop windows, or choose a solid window surface." checked={preferences.windowTransparent} onChange={() => updatePreferences({ windowTransparent: !preferences.windowTransparent })} />
+                <ToggleRow title="Glass blur" description="Blur content behind glass surfaces. Performance mode always disables blur." checked={preferences.blurEnabled} onChange={() => updatePreferences({ blurEnabled: !preferences.blurEnabled })} />
+                <SelectRow title="Glass intensity" description="Adjust surface opacity and blur without changing your theme." value={preferences.glassIntensity} options={[{ value: 'subtle', label: 'Subtle' }, { value: 'balanced', label: 'Balanced' }, { value: 'rich', label: 'Rich' }] as const} onChange={(glassIntensity) => updatePreferences({ glassIntensity })} />
+                <SelectRow title="Window corners" description="Choose the corner radius for floating desktop windows." value={preferences.windowRadius} options={[{ value: 'small', label: '10 px' }, { value: 'medium', label: '16 px' }, { value: 'large', label: '22 px' }] as const} onChange={(windowRadius) => updatePreferences({ windowRadius })} />
+              </SettingsCard>
+              <SettingsCard title="Desktop icons">
+                <ToggleRow title="Desktop labels" description="Show app and website names beneath desktop icons. Accessible names remain available." checked={preferences.showDesktopLabels} onChange={() => updatePreferences({ showDesktopLabels: !preferences.showDesktopLabels })} />
+                <SelectRow title="Icon size" description="Adjust desktop icon and label sizing." value={preferences.desktopIconSize} options={[{ value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }] as const} onChange={(desktopIconSize) => updatePreferences({ desktopIconSize })} />
+                <SelectRow title="Desktop layout" description="Use a single column or a compact multi-column grid on larger screens." value={preferences.desktopLayout} options={[{ value: 'vertical', label: 'Column' }, { value: 'grid', label: 'Grid' }] as const} onChange={(desktopLayout) => updatePreferences({ desktopLayout })} />
+              </SettingsCard>
+              <SettingsCard title="Taskbar">
+                <ToggleRow title="Show clock" description="Show the date and time control in the system tray." checked={preferences.showClock} onChange={() => updatePreferences({ showClock: !preferences.showClock })} />
+                <SelectRow title="Taskbar size" description="Automatic adapts to touch input; compact and large use fixed desktop heights." value={preferences.taskbarSize} options={[{ value: 'auto', label: 'Automatic' }, { value: 'compact', label: 'Compact' }, { value: 'large', label: 'Large' }] as const} onChange={(taskbarSize) => updatePreferences({ taskbarSize })} />
+                <ToggleRow title="Taskbar transparency" description="Use a glass taskbar or a solid surface. Performance mode remains opaque." checked={preferences.taskbarTransparent} onChange={() => updatePreferences({ taskbarTransparent: !preferences.taskbarTransparent })} />
+                <SelectRow title="Taskbar position" description="Place the taskbar above or below the desktop. Phone layouts keep it at the top." value={preferences.taskbarPosition} options={[{ value: 'top', label: 'Top' }, { value: 'bottom', label: 'Bottom' }] as const} onChange={(taskbarPosition) => updatePreferences({ taskbarPosition })} />
+              </SettingsCard>
+              <SettingsCard title="Cursor">
+                <SelectRow title="Cursor style" description="Use the system cursor, NOVA’s static cursor, or your uploaded raster cursor." value={preferences.cursorStyle} options={(preferences.customCursor ? [{ value: 'system', label: 'System' }, { value: 'nova', label: 'NOVA' }, { value: 'custom', label: 'Custom' }] : [{ value: 'system', label: 'System' }, { value: 'nova', label: 'NOVA' }]) as readonly { value: typeof preferences.cursorStyle; label: string }[]} onChange={(cursorStyle) => updatePreferences({ cursorStyle })} />
+                <div className="flex items-center gap-3 py-3"><div className="min-w-0 flex-1"><h4 className="text-xs font-medium text-ink/70">Custom raster cursor</h4><p className="mt-1 text-[10px] leading-4 text-muted">PNG or WebP, 512 KB maximum. Re-encoded to a 32 px PNG; SVG is rejected.</p></div>{preferences.customCursor && <img src={preferences.customCursor} alt="Custom cursor preview" className="h-8 w-8 object-contain" />}<button className="nova-button nova-button-secondary h-8 min-h-8 px-2.5 text-[10px]" onClick={() => cursorInputRef.current?.click()} disabled={cursorBusy}>{cursorBusy ? 'Adding…' : 'Upload'}</button><input ref={cursorInputRef} type="file" className="hidden" accept="image/png,image/webp" onChange={(event) => { void uploadCursor(event.target.files?.[0]); event.target.value = ''; }} /></div>
+                {preferences.customCursor && <div className="py-2"><button className="text-[10px] text-muted hover:text-ink/70" onClick={() => updatePreferences({ cursorStyle: 'system', customCursor: null })}>Remove custom cursor</button></div>}
+              </SettingsCard>
+            </div>
           </>}
 
           {tab === 'system' && <>
             <p className="eyebrow">DESKTOP BEHAVIOR</p><h2 className="mt-1.5 text-xl font-semibold">System preferences</h2><p className="mt-1.5 text-[11px] text-muted">Tune NOVA for comfort or lower-resource hardware.</p>
-            <div className="mt-5 space-y-3"><SettingsCard title="Accessibility & performance"><ToggleRow title="Reduce motion" description="Minimize interface transitions. Your operating system preference is also respected." checked={preferences.reduceMotion} onChange={() => updatePreferences({ reduceMotion: !preferences.reduceMotion })} /><ToggleRow title="Performance mode" description="Disable backdrop blur and transparency effects to reduce GPU compositing." checked={preferences.performanceMode} onChange={() => updatePreferences({ performanceMode: !preferences.performanceMode })} /><ToggleRow title="Compact window controls" description="Use a slightly tighter title bar layout." checked={preferences.compactMode} onChange={() => updatePreferences({ compactMode: !preferences.compactMode })} /></SettingsCard><SettingsCard title="Desktop"><ToggleRow title="24-hour clock" description="Use 24-hour time in the system tray." checked={preferences.clock24h} onChange={() => updatePreferences({ clock24h: !preferences.clock24h })} /></SettingsCard></div>
+            <div className="mt-5 space-y-3"><SettingsCard title="Startup"><ToggleRow title="Startup animation" description="Show the polished NOVA logo entrance. Reduced motion always takes priority." checked={preferences.startupAnimation} onChange={() => updatePreferences({ startupAnimation: !preferences.startupAnimation })} /><ToggleRow title="Startup sound" description="Play a short local chime after a click or key press when browser autoplay rules allow it." checked={preferences.startupSound} onChange={() => updatePreferences({ startupSound: !preferences.startupSound })} /></SettingsCard><SettingsCard title="Accessibility & performance"><ToggleRow title="Reduce motion" description="Minimize interface transitions. Your operating system preference is also respected." checked={preferences.reduceMotion} onChange={() => updatePreferences({ reduceMotion: !preferences.reduceMotion })} /><ToggleRow title="Performance mode" description="Use opaque surfaces and disable backdrop blur to reduce GPU compositing." checked={preferences.performanceMode} onChange={() => updatePreferences({ performanceMode: !preferences.performanceMode })} /><ToggleRow title="High contrast" description="Strengthen text, borders, and focus indicators with more opaque surfaces." checked={preferences.highContrast} onChange={() => updatePreferences({ highContrast: !preferences.highContrast })} /><ToggleRow title="Compact window controls" description="Use a slightly tighter title bar layout." checked={preferences.compactMode} onChange={() => updatePreferences({ compactMode: !preferences.compactMode })} /></SettingsCard><SettingsCard title="Desktop"><ToggleRow title="24-hour clock" description="Use 24-hour time in the system tray." checked={preferences.clock24h} onChange={() => updatePreferences({ clock24h: !preferences.clock24h })} /></SettingsCard></div>
             <div className="nova-card mt-4 flex items-center gap-3 p-4"><Gauge size={18} className="accent-text" /><p className="flex-1 text-[10px] leading-5 text-muted">For the Intel i5-3330 / GTX 960 target, Performance mode and reduced motion can lower visual overhead. App code is lazy-loaded and the wallpaper uses static CSS rather than a canvas.</p></div>
             <div className="mt-5 flex flex-wrap gap-2"><button className="nova-button nova-button-secondary" onClick={resetPreferences}><RefreshCw size={14} /> Reset preferences</button><button className="nova-button nova-button-secondary" onClick={() => { try { localStorage.removeItem(WELCOME_KEY); } catch { /* Storage may be blocked. */ } notify({ title: 'Welcome screen reset', message: 'Reload NOVA to see the welcome experience again.', tone: 'success' }); }}><Monitor size={14} /> Show welcome next launch</button></div>
           </>}
@@ -171,7 +231,7 @@ export default function SettingsApp() {
         </div>
       </div>
 
-      {pendingImport && <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/55 p-4" onClick={() => setPendingImport(null)}><section ref={importDialogRef} tabIndex={-1} className="glass-panel app-scroll max-h-full w-full max-w-md overflow-y-auto p-5" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Import preview"><div className="flex items-center"><div className="flex-1"><p className="eyebrow">VALIDATED BACKUP</p><h3 className="mt-1 text-base font-semibold">Review import</h3></div><button className="icon-button" onClick={() => setPendingImport(null)} aria-label="Cancel import"><X size={16} /></button></div><p className="mt-3 text-[11px] leading-5 text-muted">The file passed schema and safety checks. Importing will replace current NOVA structured data and preferences.</p><div className="mt-4 grid grid-cols-3 gap-2 text-center sm:grid-cols-5">{[['Files', pendingImport.files.length], ['Notes', pendingImport.notes.length], ['Events', pendingImport.events.length], ['History', pendingImport.history.length], ['Bookmarks', pendingImport.bookmarks.length]].map(([label, count]) => <div key={label} className="rounded-lg bg-ink/[0.035] p-2.5"><p className="text-sm font-semibold text-ink/70">{count}</p><p className="mt-1 text-[9px] text-muted">{label}</p></div>)}</div><p className="mt-4 text-[9px] text-muted">Exported {new Date(pendingImport.exportedAt).toLocaleString()}</p><div className="mt-5 flex flex-wrap justify-end gap-2"><button className="nova-button nova-button-secondary" onClick={() => setPendingImport(null)}>Cancel</button><button className="nova-button" onClick={() => void applyImport()} disabled={busy}>Replace local data</button></div></section></div>}
+      {pendingImport && <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/55 p-4" onClick={() => setPendingImport(null)}><section ref={importDialogRef} tabIndex={-1} className="glass-panel app-scroll max-h-full w-full max-w-md overflow-y-auto p-5" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Import preview"><div className="flex items-center"><div className="flex-1"><p className="eyebrow">VALIDATED BACKUP</p><h3 className="mt-1 text-base font-semibold">Review import</h3></div><button className="icon-button" onClick={() => setPendingImport(null)} aria-label="Cancel import"><X size={16} /></button></div><p className="mt-3 text-[11px] leading-5 text-muted">The file passed schema and safety checks. Importing will replace current NOVA structured data and preferences.</p><div className="mt-4 grid grid-cols-3 gap-2 text-center sm:grid-cols-5">{importCounts.map(({ label, count }) => <div key={label} className="rounded-lg bg-ink/[0.035] p-2.5"><p className="text-sm font-semibold text-ink/70">{count}</p><p className="mt-1 text-[9px] text-muted">{label}</p></div>)}</div><p className="mt-4 text-[9px] text-muted">Exported {new Date(pendingImport.exportedAt).toLocaleString()}</p><div className="mt-5 flex flex-wrap justify-end gap-2"><button className="nova-button nova-button-secondary" onClick={() => setPendingImport(null)}>Cancel</button><button className="nova-button" onClick={() => void applyImport()} disabled={busy}>Replace local data</button></div></section></div>}
     </div>
   );
 }

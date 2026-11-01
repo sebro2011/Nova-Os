@@ -2,6 +2,7 @@ import type { BrowserBookmark, BrowserHistoryEntry, CalendarEvent, FileNode, Not
 import { isValidDateKey } from './calendar';
 import { validateFileName } from './files';
 import { sanitizePreferences } from './preferences';
+import { validateWebsiteShortcuts } from './websites';
 
 export const MAX_BACKUP_FILE_BYTES = 64 * 1024 * 1024;
 
@@ -194,5 +195,6 @@ export function validateBackup(value: unknown): NovaBackup {
     events: validateEvents(input.events),
     history: validateHistory(input.history),
     bookmarks: input.bookmarks === undefined ? [] : validateBookmarks(input.bookmarks),
+    ...(input.websites === undefined ? {} : { websites: validateWebsiteShortcuts(input.websites) }),
   };
 }

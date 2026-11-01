@@ -44,6 +44,24 @@ describe('backup validation', () => {
     expect(() => validateBackup(unsafe)).toThrow('unsafe URL');
   });
 
+  it('keeps version 1 backups compatible with the high-contrast preference', () => {
+    const legacy = backup();
+    delete (legacy.preferences as Partial<typeof defaultPreferences>).highContrast;
+    expect(validateBackup(legacy).preferences.highContrast).toBe(false);
+
+    const current = backup();
+    current.preferences.highContrast = true;
+    expect(validateBackup(current).preferences.highContrast).toBe(true);
+  });
+
+  it('keeps website shortcuts optional for version 1 backup compatibility', () => {
+    expect(validateBackup(backup()).websites).toBeUndefined();
+    const current = backup();
+    current.websites = [{ id: 'website', name: 'Example', url: 'https://example.com', icon: 'data:image/png;base64,AAAA', showOnDesktop: true, createdAt: now }];
+    expect(validateBackup(current).websites?.[0]).toMatchObject({ name: 'Example', url: 'https://example.com/' });
+    expect(() => validateBackup({ ...current, websites: [{ ...current.websites![0], url: 'javascript:alert(1)' }] })).toThrow('HTTP and HTTPS');
+  });
+
   it('serializes backups with the same size contract used by import', () => {
     const value = backup();
     value.notes = Array.from({ length: 9 }, (_, index) => ({ id: `large-note-${index}`, title: 'Large', content: 'x'.repeat(1_000_000), createdAt: now, updatedAt: now }));

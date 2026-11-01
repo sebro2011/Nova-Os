@@ -18,8 +18,18 @@
   --editor-bg: rgba(11, 15, 28, 0.985);
   --text: #f5f7ff;
   --muted: #a2abc2;
-  --glass: rgba(13, 17, 31, 0.76);
-  --glass-strong: rgba(13, 17, 31, 0.92);
+  --glass: rgba(13, 17, 31, 0.74);
+  --glass-strong: rgba(13, 17, 31, 0.94);
+  --glass-rgb: 13 17 31;
+  --window-rgb: 13 17 31;
+  --glass-alpha: 0.74;
+  --window-alpha: 0.94;
+  --glass-blur: 20px;
+  --window-blur: 24px;
+  --shell-bg: rgba(8, 11, 22, 0.68);
+  --performance-bg: #0d111f;
+  --window-shadow: 0 30px 90px rgba(0, 0, 0, 0.52);
+  --glass-highlight: rgba(255, 255, 255, 0.07);
   --line: rgba(255, 255, 255, 0.1);
 }
 
@@ -80,7 +90,8 @@ button:disabled {
 }
 
 .nova-root {
-  --topbar-height: calc(44px + env(safe-area-inset-top, 0px));
+  --taskbar-base-height: 44px;
+  --topbar-height: calc(var(--taskbar-base-height) + env(safe-area-inset-top, 0px));
   --dock-height: calc(74px + env(safe-area-inset-bottom, 0px));
   color: var(--text);
   background: var(--page);
@@ -99,14 +110,22 @@ button:disabled {
 .nova-root[data-theme='midnight'] {
   --page: #03050a;
   --glass: rgba(7, 11, 19, 0.82);
-  --glass-strong: rgba(7, 11, 19, 0.95);
+  --glass-strong: rgba(7, 11, 19, 0.96);
+  --glass-rgb: 7 11 19;
+  --window-rgb: 7 11 19;
+  --shell-bg: rgba(5, 8, 15, 0.76);
+  --performance-bg: #070b13;
   --accent-secondary: #4788df;
 }
 
 .nova-root[data-theme='nebula'] {
   --page: #0c0718;
   --glass: rgba(23, 14, 38, 0.76);
-  --glass-strong: rgba(20, 12, 34, 0.94);
+  --glass-strong: rgba(20, 12, 34, 0.95);
+  --glass-rgb: 20 12 34;
+  --window-rgb: 20 12 34;
+  --shell-bg: rgba(18, 11, 31, 0.72);
+  --performance-bg: #140c22;
   --accent-secondary: #d17ffa;
 }
 
@@ -117,8 +136,14 @@ button:disabled {
   --editor-bg: rgba(248, 250, 255, 0.985);
   --text: #101828;
   --muted: #5b6474;
-  --glass: rgba(255, 255, 255, 0.76);
-  --glass-strong: rgba(248, 250, 255, 0.94);
+  --glass: rgba(255, 255, 255, 0.78);
+  --glass-strong: rgba(248, 250, 255, 0.96);
+  --glass-rgb: 248 250 255;
+  --window-rgb: 248 250 255;
+  --shell-bg: rgba(248, 250, 255, 0.76);
+  --performance-bg: #f8faff;
+  --window-shadow: 0 26px 70px rgba(51, 65, 95, 0.2);
+  --glass-highlight: rgba(255, 255, 255, 0.72);
   --line: rgba(15, 23, 42, 0.12);
   color-scheme: light;
 }
@@ -258,18 +283,76 @@ button:disabled {
   background: linear-gradient(115deg, rgba(255, 255, 255, 0.18), transparent 60%, rgba(255, 255, 255, 0.1));
 }
 
+.wallpaper-preview {
+  display: block;
+  height: 58px;
+  overflow: hidden;
+  border-radius: 9px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.wallpaper-preview-aurora {
+  background: radial-gradient(ellipse at 14% 6%, rgba(68, 88, 190, 0.65), transparent 48%), radial-gradient(ellipse at 88% 80%, rgba(95, 50, 153, 0.5), transparent 46%), linear-gradient(145deg, #070913, #101a38 60%, #11101f);
+}
+
+.wallpaper-preview-orbit {
+  background: radial-gradient(ellipse at 50% 115%, rgba(49, 111, 145, 0.75), transparent 52%), linear-gradient(160deg, #03050a, #0a1a2e 62%, #07101a);
+}
+
+.wallpaper-preview-starlight {
+  background: radial-gradient(circle at 72% 24%, rgba(255, 255, 255, 0.75) 0 1px, transparent 1.5px), radial-gradient(ellipse at 60% 20%, rgba(129, 82, 190, 0.48), transparent 46%), linear-gradient(155deg, #070913, #17102b 65%, #0b0916);
+  background-size: 28px 31px, auto, auto;
+}
+
 .glass-panel {
   border: 1px solid var(--line);
   border-radius: 20px;
-  background: var(--glass);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.055);
-  backdrop-filter: blur(20px) saturate(130%);
-  -webkit-backdrop-filter: blur(20px) saturate(130%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.035), transparent 42%), rgb(var(--glass-rgb) / var(--glass-alpha));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36), inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: blur(var(--glass-blur)) saturate(130%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(130%);
 }
 
 .glass-subtle {
   border: 1px solid rgba(255, 255, 255, 0.075);
   background: rgba(255, 255, 255, 0.035);
+}
+
+.nova-root[data-glass='subtle'] {
+  --glass-alpha: 0.88;
+  --window-alpha: 0.98;
+  --glass-blur: 12px;
+  --window-blur: 14px;
+}
+
+.nova-root[data-glass='rich'] {
+  --glass-alpha: 0.6;
+  --window-alpha: 0.86;
+  --glass-blur: 28px;
+  --window-blur: 32px;
+}
+
+.nova-root[data-blur='false'] {
+  --glass-blur: 0px;
+  --window-blur: 0px;
+}
+
+.nova-root[data-window-transparent='false'] {
+  --window-alpha: 1;
+  --window-blur: 0px;
+}
+
+.nova-root[data-window-radius='small'] .window-frame:not(.mobile-window) {
+  border-radius: 10px;
+}
+
+.nova-root[data-window-radius='large'] .window-frame:not(.mobile-window) {
+  border-radius: 22px;
+}
+
+.nova-root[data-performance='true'] {
+  --shell-bg: var(--performance-bg);
+  --editor-bg: var(--performance-bg);
 }
 
 .nova-root[data-performance='true'] .glass-panel,
@@ -278,17 +361,17 @@ button:disabled {
 .nova-root[data-performance='true'] .desktop-dock {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  background: var(--glass-strong);
+  background: var(--performance-bg);
 }
 
 .window-frame {
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--line);
   border-radius: 16px;
-  background: var(--glass-strong);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(24px) saturate(135%);
-  -webkit-backdrop-filter: blur(24px) saturate(135%);
+  background: rgb(var(--window-rgb) / var(--window-alpha));
+  box-shadow: var(--window-shadow), inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: blur(var(--window-blur)) saturate(135%);
+  -webkit-backdrop-filter: blur(var(--window-blur)) saturate(135%);
 }
 
 .window-frame[data-focused='false'] {
@@ -299,6 +382,7 @@ button:disabled {
 .window-titlebar {
   touch-action: none;
   user-select: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent);
 }
 
 .window-resize-handle {
@@ -309,10 +393,11 @@ button:disabled {
 
 .desktop-topbar,
 .desktop-dock {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: rgba(8, 11, 22, 0.62);
-  backdrop-filter: blur(18px) saturate(130%);
-  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  border-color: var(--line);
+  background: var(--shell-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(20px) saturate(135%);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
 }
 
 .desktop-topbar {
@@ -320,6 +405,46 @@ button:disabled {
   padding-top: env(safe-area-inset-top, 0px);
   padding-left: max(10px, env(safe-area-inset-left, 0px));
   padding-right: max(10px, env(safe-area-inset-right, 0px));
+  background: var(--taskbar-bg, var(--shell-bg));
+}
+
+.nova-root[data-taskbar-size='compact'] {
+  --taskbar-base-height: 40px;
+}
+
+.nova-root[data-taskbar-size='large'] {
+  --taskbar-base-height: 52px;
+}
+
+.nova-root[data-taskbar-transparent='false'] {
+  --taskbar-bg: var(--performance-bg);
+}
+
+.nova-root[data-taskbar-transparent='false'] .desktop-topbar {
+  background: var(--taskbar-bg);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.nova-root[data-taskbar-position='bottom'] {
+  --topbar-height: calc(var(--taskbar-base-height) + env(safe-area-inset-bottom, 0px));
+  --dock-height: 74px;
+}
+
+.nova-root[data-taskbar-position='bottom'] .desktop-topbar {
+  padding-top: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+}
+
+.nova-root[data-taskbar-position='bottom'] .desktop-dock-footer {
+  padding-bottom: 12px;
+}
+
+.nova-root[data-taskbar-position='bottom'] .shell-popover {
+  top: auto;
+  bottom: calc(52px + env(safe-area-inset-bottom, 0px));
 }
 
 .desktop-dock-footer {
@@ -331,6 +456,7 @@ button:disabled {
 
 .desktop-dock {
   scrollbar-width: none;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28), inset 0 1px 0 var(--glass-highlight);
 }
 
 .desktop-dock::-webkit-scrollbar {
@@ -589,15 +715,27 @@ select.nova-input {
   border-radius: 13px;
   color: rgba(241, 245, 255, 0.8);
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
   transition: transform 150ms ease, color 150ms ease, border-color 150ms ease, background 150ms ease;
 }
 
-.dock-icon:hover {
-  z-index: 1;
-  color: white;
+.dock-icon[data-active='true'] {
   border-color: rgba(var(--accent-rgb), 0.32);
-  background: rgba(var(--accent-rgb), 0.12);
-  transform: translateY(-4px);
+  background: rgba(var(--accent-rgb), 0.13);
+}
+
+@media (hover: hover) {
+  .dock-icon:hover {
+    z-index: 1;
+    color: white;
+    border-color: rgba(var(--accent-rgb), 0.32);
+    background: rgba(var(--accent-rgb), 0.12);
+    transform: translateY(-3px);
+  }
+}
+
+.dock-icon:active {
+  transform: translateY(-1px) scale(0.97);
 }
 
 .dock-icon[data-running='true']::after {
@@ -608,15 +746,56 @@ select.nova-input {
   height: 4px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 7px var(--accent);
 }
 
 .range-accent {
   accent-color: var(--accent);
 }
 
-.compact-mode .window-titlebar {
-  min-height: 38px;
+.nova-root[data-compact='true'] .window-titlebar {
+  height: 40px;
+  min-height: 40px;
+}
+
+.nova-root[data-desktop-labels='false'] .desktop-icon-label {
+  display: none;
+}
+
+.nova-root:not([data-phone-layout='true'])[data-desktop-icon-size='small'] .desktop-icon {
+  width: 70px;
+  min-height: 68px;
+  font-size: 11px;
+}
+
+.nova-root:not([data-phone-layout='true'])[data-desktop-icon-size='small'] .desktop-icon-symbol {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+}
+
+.nova-root:not([data-phone-layout='true'])[data-desktop-icon-size='large'] .desktop-icon {
+  width: 96px;
+  min-height: 94px;
+  font-size: 13px;
+}
+
+.nova-root:not([data-phone-layout='true'])[data-desktop-icon-size='large'] .desktop-icon-symbol {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+}
+
+.nova-root[data-cursor='nova'] {
+  cursor: url('/nova-cursor.svg') 2 2, auto;
+}
+
+@keyframes desktop-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.nova-root.desktop-enter[data-startup-animation='true'] {
+  animation: desktop-enter 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .sr-only-focusable:not(:focus):not(:focus-within) {
@@ -630,17 +809,28 @@ select.nova-input {
 
 .nova-root[data-color-mode='light'] .desktop-topbar,
 .nova-root[data-color-mode='light'] .desktop-dock {
-  border-color: rgba(15, 23, 42, 0.09);
-  background: rgba(248, 250, 255, 0.7);
+  border-color: var(--line);
+}
+
+.nova-root[data-color-mode='light'] .desktop-topbar {
+  background: var(--taskbar-bg, var(--shell-bg));
+}
+
+.nova-root[data-color-mode='light'] .desktop-dock {
+  background: var(--shell-bg);
+}
+
+.nova-root[data-color-mode='light'] .desktop-dock {
+  box-shadow: 0 18px 45px rgba(51, 65, 95, 0.16), inset 0 1px 0 var(--glass-highlight);
 }
 
 .nova-root[data-color-mode='light'] .window-frame {
   border-color: rgba(15, 23, 42, 0.13);
-  box-shadow: 0 26px 70px rgba(51, 65, 95, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  box-shadow: var(--window-shadow), inset 0 1px 0 var(--glass-highlight);
 }
 
 .nova-root[data-color-mode='light'] .glass-panel {
-  box-shadow: 0 24px 70px rgba(51, 65, 95, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  box-shadow: 0 24px 70px rgba(51, 65, 95, 0.16), inset 0 1px 0 var(--glass-highlight);
 }
 
 .nova-root[data-color-mode='light'] .nova-button {
@@ -730,6 +920,66 @@ select.nova-input {
   color: #08775b;
 }
 
+.nova-root[data-contrast='high'] {
+  --text: #ffffff;
+  --muted: #dce3f2;
+  --app-bg: #070b14;
+  --editor-bg: #070b14;
+  --glass: #080c16;
+  --glass-strong: #080c16;
+  --shell-bg: #080c16;
+  --performance-bg: #080c16;
+  --glass-highlight: rgba(255, 255, 255, 0.32);
+  --line: rgba(255, 255, 255, 0.34);
+}
+
+.nova-root[data-color-mode='light'][data-contrast='high'] {
+  --text: #050914;
+  --muted: #303b4e;
+  --app-bg: #ffffff;
+  --editor-bg: #ffffff;
+  --glass: #ffffff;
+  --glass-strong: #ffffff;
+  --shell-bg: #ffffff;
+  --performance-bg: #ffffff;
+  --glass-highlight: rgba(15, 23, 42, 0.24);
+  --line: rgba(15, 23, 42, 0.38);
+}
+
+.nova-root[data-contrast='high'] .dark-surface {
+  --text: #ffffff;
+  --muted: #dce3f2;
+  --editor-bg: #070b14;
+}
+
+.nova-root[data-contrast='high'] .glass-panel,
+.nova-root[data-contrast='high'] .window-frame,
+.nova-root[data-contrast='high'] .desktop-topbar,
+.nova-root[data-contrast='high'] .desktop-dock {
+  border-color: var(--line);
+  background: var(--glass-strong);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.nova-root[data-contrast='high'] .nova-card,
+.nova-root[data-contrast='high'] .glass-subtle,
+.nova-root[data-contrast='high'] .nova-input {
+  border-color: var(--line);
+}
+
+.nova-root[data-contrast='high'] [class*='text-ink/'] {
+  color: var(--text);
+}
+
+.nova-root[data-contrast='high'] [class*='border-ink/'] {
+  border-color: var(--line);
+}
+
+.nova-root[data-contrast='high'] :is(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline-width: 3px;
+}
+
 @media (max-width: 767px) {
   .glass-panel {
     border-radius: 16px;
@@ -778,6 +1028,10 @@ select.nova-input {
 }
 
 @media (pointer: coarse) {
+  .nova-root[data-taskbar-size='auto'] {
+    --taskbar-base-height: 52px;
+  }
+
   button,
   a {
     touch-action: manipulation;

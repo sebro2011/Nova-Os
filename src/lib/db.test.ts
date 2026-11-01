@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getAllRecords, getRecord, initializeDatabase, putRecord } from './db';
-import type { FileNode, Note } from '../types';
+import { getAllRecords, getDatabaseSnapshot, getRecord, initializeDatabase, putRecord, replaceDatabaseSnapshot } from './db';
+import type { FileNode, Note, WebsiteShortcut } from '../types';
 
 async function reset() {
   await new Promise<void>((resolve, reject) => {
@@ -25,6 +25,20 @@ describe('IndexedDB integration', () => {
     const note: Note = { id: 'note-test', title: 'Saved', content: 'IndexedDB', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     await putRecord('notes', note);
     expect(await getRecord<Note>('notes', note.id)).toEqual(note);
+  });
+
+  it('persists website shortcuts and preserves them during legacy snapshot replacement', async () => {
+    await initializeDatabase();
+    const website: WebsiteShortcut = { id: 'website-test', name: 'Example', url: 'https://example.com/', icon: null, showOnDesktop: true, createdAt: new Date().toISOString() };
+    await putRecord('websites', website);
+    const snapshot = await getDatabaseSnapshot();
+    expect(snapshot.websites).toEqual([website]);
+
+    await replaceDatabaseSnapshot({ files: snapshot.files, notes: [], events: [], history: [], bookmarks: [] });
+    expect(await getRecord<WebsiteShortcut>('websites', website.id)).toEqual(website);
+
+    await replaceDatabaseSnapshot({ files: snapshot.files, notes: [], events: [], history: [], bookmarks: [], websites: [] });
+    expect(await getRecord<WebsiteShortcut>('websites', website.id)).toBeUndefined();
   });
 
   it('reopens instead of reusing a connection closed by versionchange', async () => {

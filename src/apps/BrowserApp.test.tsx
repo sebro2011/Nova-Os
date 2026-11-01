@@ -3,6 +3,19 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import BrowserApp from './BrowserApp';
 
+const mocks = vi.hoisted(() => ({
+  intent: undefined as { url?: string } | undefined,
+  consumeLaunchIntent: vi.fn(() => {
+    const intent = mocks.intent;
+    mocks.intent = undefined;
+    return intent;
+  }),
+}));
+
+vi.mock('../context/LaunchContext', () => ({
+  useLauncher: () => ({ consumeLaunchIntent: mocks.consumeLaunchIntent }),
+}));
+
 vi.mock('../context/NotificationContext', () => ({
   useNotifications: () => ({ notify: vi.fn() }),
 }));
@@ -18,6 +31,8 @@ vi.mock('../lib/db', () => ({
 
 afterEach(() => {
   cleanup();
+  mocks.intent = undefined;
+  mocks.consumeLaunchIntent.mockClear();
   Reflect.deleteProperty(HTMLElement.prototype, 'requestFullscreen');
 });
 
@@ -111,6 +126,15 @@ describe('NOVA Browser embedding fallback', () => {
     await screen.findByTitle('NOVA Browser — example.com');
     await user.click(screen.getByRole('button', { name: 'Enter fullscreen' }));
     expect(requestFullscreen).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens website launch intents through the existing embedding policy pipeline', async () => {
+    mocks.intent = { url: 'https://github.com/sebro2011/Nova-Os' };
+    render(<BrowserApp />);
+
+    expect(await screen.findByRole('heading', { name: 'Open this site in a normal browser tab' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Address and search bar')).toHaveValue('https://github.com/sebro2011/Nova-Os');
+    expect(document.querySelector('iframe')).not.toBeInTheDocument();
   });
 
   it('shows an honest offline page instead of attempting a frame', async () => {

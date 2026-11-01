@@ -1,7 +1,33 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { appRegistry } from '../apps/registry';
-import type { AppId, NovaWindow, WindowBounds } from '../types';
+import type { AppId, NovaWindow, WindowBounds, WindowSnapSide } from '../types';
 import { clamp } from '../lib/utils';
+
+type WorkspaceRect = Pick<DOMRect, 'width' | 'height'>;
+
+function fitBounds(bounds: WindowBounds, rect: WorkspaceRect): WindowBounds {
+  const width = Math.min(bounds.width, Math.max(280, rect.width - 16));
+  const height = Math.min(bounds.height, Math.max(240, rect.height - 16));
+  return {
+    width,
+    height,
+    x: clamp(bounds.x, 0, Math.max(0, rect.width - width)),
+    y: clamp(bounds.y, 0, Math.max(0, rect.height - height)),
+  };
+}
+
+function snapBounds(side: WindowSnapSide, rect: WorkspaceRect): WindowBounds {
+  const margin = 8;
+  const gap = 8;
+  const width = Math.max(0, (rect.width - margin * 2 - gap) / 2);
+  const height = Math.max(0, rect.height - margin * 2);
+  return {
+    x: side === 'left' ? margin : rect.width - width - margin,
+    y: margin,
+    width,
+    height,
+  };
+}
 
 export function useWindowManager(workspaceRef: RefObject<HTMLDivElement>) {
   const [windows, setWindows] = useState<NovaWindow[]>([]);
@@ -58,8 +84,39 @@ export function useWindowManager(workspaceRef: RefObject<HTMLDivElement>) {
     setWindows((current) => current.map((item) => item.id === id ? { ...item, maximized: !item.maximized, minimized: false, zIndex } : item));
   }, []);
 
+  const snapWindow = useCallback((id: string, side: WindowSnapSide) => {
+    const rect = workspaceRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const zIndex = ++nextZ.current;
+    setWindows((current) => current.map((item) => {
+      if (item.id !== id) return item;
+      if (item.snapped === side && !item.maximized && item.previousBounds) {
+        return {
+          ...item,
+          ...fitBounds(item.previousBounds, rect),
+          snapped: undefined,
+          previousBounds: undefined,
+          minimized: false,
+          zIndex,
+        };
+      }
+      const previousBounds = item.previousBounds ?? { x: item.x, y: item.y, width: item.width, height: item.height };
+      return {
+        ...item,
+        ...snapBounds(side, rect),
+        snapped: side,
+        previousBounds,
+        maximized: false,
+        minimized: false,
+        zIndex,
+      };
+    }));
+  }, [workspaceRef]);
+
   const updateBounds = useCallback((id: string, bounds: WindowBounds) => {
-    setWindows((current) => current.map((item) => item.id === id ? { ...item, ...bounds } : item));
+    setWindows((current) => current.map((item) => item.id === id
+      ? { ...item, ...bounds, snapped: undefined, previousBounds: undefined }
+      : item));
   }, []);
 
   const activeWindow = useMemo(() => windows
@@ -74,20 +131,28 @@ export function useWindowManager(workspaceRef: RefObject<HTMLDivElement>) {
     const fitWindows = () => {
       const rect = workspaceRef.current?.getBoundingClientRect();
       if (!rect) return;
-      setWindows((current) => current.map((item) => {
-        const width = Math.min(item.width, Math.max(280, rect.width - 16));
-        const height = Math.min(item.height, Math.max(240, rect.height - 16));
-        return {
-          ...item,
-          width,
-          height,
-          x: clamp(item.x, 0, Math.max(0, rect.width - width)),
-          y: clamp(item.y, 0, Math.max(0, rect.height - height)),
-        };
-      }));
+      setWindows((current) => {
+        let changed = false;
+        const next = current.map((item) => {
+          const bounds = item.snapped ? snapBounds(item.snapped, rect) : fitBounds(item, rect);
+          if (item.x === bounds.x && item.y === bounds.y && item.width === bounds.width && item.height === bounds.height) return item;
+          changed = true;
+          return { ...item, ...bounds };
+        });
+        return changed ? next : current;
+      });
     };
+    const workspace = workspaceRef.current;
+    fitWindows();
     window.addEventListener('resize', fitWindows);
-    return () => window.removeEventListener('resize', fitWindows);
+    const observer = typeof ResizeObserver === 'function' && workspace
+      ? new ResizeObserver(fitWindows)
+      : null;
+    if (observer && workspace) observer.observe(workspace);
+    return () => {
+      window.removeEventListener('resize', fitWindows);
+      observer?.disconnect();
+    };
   }, [workspaceRef]);
 
   return {
@@ -98,6 +163,7 @@ export function useWindowManager(workspaceRef: RefObject<HTMLDivElement>) {
     closeActiveWindow,
     minimizeWindow,
     toggleMaximize,
+    snapWindow,
     focusWindow,
     updateBounds,
   };

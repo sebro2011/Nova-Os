@@ -9,7 +9,10 @@ vi.mock('../lib/db', () => ({
   getAllRecords: vi.fn(async (store: string) => store === 'notes' ? [{ id: 'n1', title: 'Unique orbit plan', content: 'Deep link target', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' }] : []),
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+});
 
 describe('global search actions', () => {
   it('opens the selected note rather than only its app', async () => {
@@ -28,5 +31,22 @@ describe('global search actions', () => {
     const result = await screen.findByText('Storage & backups');
     fireEvent.click(result.closest('button')!);
     expect(onOpen).toHaveBeenCalledWith('settings', { section: 'data' });
+  });
+
+  it('keeps combobox navigation and the active option relationship keyboard-accessible', async () => {
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView });
+    render(<SearchPalette onClose={vi.fn()} onOpen={vi.fn()} />);
+    const input = screen.getByRole('combobox');
+    const options = await screen.findAllByRole('option');
+
+    expect(input).toHaveAttribute('aria-controls', 'search-results');
+    fireEvent.keyDown(input, { key: 'End' });
+    expect(options[options.length - 1]).toHaveAttribute('aria-selected', 'true');
+    expect(input).toHaveAttribute('aria-activedescendant', options[options.length - 1].id);
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+
+    fireEvent.keyDown(input, { key: 'Home' });
+    expect(options[0]).toHaveAttribute('aria-selected', 'true');
   });
 });

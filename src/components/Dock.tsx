@@ -17,7 +17,7 @@ export function Dock({ windows, activeAppId, onOpen, onLauncher, launcherExpande
   const isPhone = usePhoneLayout();
   const runningIds = windows.map((item) => item.appId);
   const orderedIds = isPhone ? [...runningIds, ...preferences.dockPinned] : [...preferences.dockPinned, ...runningIds];
-  const appIds = [...new Set(orderedIds)].filter((id) => id !== 'app-center').slice(0, isPhone ? 4 : 9);
+  const appIds = [...new Set(orderedIds)].filter((id) => id !== 'app-center' && !preferences.removedApps.includes(id)).slice(0, isPhone ? 4 : 9);
 
   return (
     <footer className="desktop-dock-footer pointer-events-none relative z-[500] flex h-[74px] shrink-0 items-center justify-center px-3 pb-3 pt-1">
@@ -37,7 +37,7 @@ export function Dock({ windows, activeAppId, onOpen, onLauncher, launcherExpande
               data-running={Boolean(appWindow)}
               data-active={activeAppId === appId}
               onClick={() => onOpen(appId)}
-              aria-label={`${appWindow?.minimized ? 'Restore' : 'Open'} ${definition.title}`}
+              aria-label={`${appWindow?.minimized ? 'Restore' : appWindow ? 'Focus' : 'Open'} ${definition.title}`}
               title={definition.title}
             >
               <Icon size={20} strokeWidth={activeAppId === appId ? 2.2 : 1.7} className={activeAppId === appId ? 'accent-text' : ''} />
