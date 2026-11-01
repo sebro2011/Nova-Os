@@ -55,17 +55,34 @@ export function getMixedContentRestriction(url: string, parentProtocol: string):
   }
 }
 
-/** Known hard blocks only; other sites may still refuse framed embedding. */
-export function getEmbeddingRestriction(url: string): string | null {
+/**
+ * Known destination framing policies only. An iframe load event cannot reveal cross-origin
+ * response headers, so unlisted sites still retain the honest compatibility fallback.
+ */
+export function getEmbeddingRestriction(url: string, parentOrigin?: string): string | null {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+
+    if (parentOrigin && parsed.origin === new URL(parentOrigin).origin) {
+      return 'NOVA does not embed its own application origin. This prevents recursive desktop frames and keeps the remote-content sandbox boundary intact. Open the address externally instead.';
+    }
+
     const hostname = parsed.hostname.toLowerCase();
     const isGoogleSearch = (hostname === 'google.com' || hostname === 'www.google.com')
       && parsed.pathname.replace(/\/+$/, '') === '/search';
-    return isGoogleSearch
-      ? 'Google Search does not allow other websites to embed its results.'
-      : null;
+    if (isGoogleSearch) return 'Google Search does not allow other websites to embed its results.';
+
+    if (hostname === 'github.com' || hostname === 'www.github.com') {
+      return 'GitHub’s main website protects its pages with framing restrictions. Repository pages, issues, and account flows must be opened in a normal browser tab.';
+    }
+
+    const isMainYouTube = ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'studio.youtube.com'].includes(hostname);
+    if (isMainYouTube && !getYouTubeEmbedUrl(url)) {
+      return 'YouTube’s main website does not permit this page to be framed. Supported video, Shorts, and live links use YouTube’s official embed player; other pages open externally.';
+    }
+
+    return null;
   } catch {
     return null;
   }

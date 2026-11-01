@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
-  ArrowLeft, ArrowRight, Bookmark, Clock3, ExternalLink, Globe2, Home,
-  LockKeyhole, MoreHorizontal, Plus, RotateCw, Search, ShieldCheck, Star, Trash2, X,
+  ArrowLeft, ArrowRight, Bookmark, Clock3, ExternalLink, Globe2, Home, LoaderCircle,
+  LockKeyhole, Maximize2, Minimize2, MoreHorizontal, Plus, RotateCw, Search, ShieldAlert,
+  ShieldCheck, Star, Trash2, X,
 } from 'lucide-react';
+import { BrowserStatusPage, type BrowserStatusKind } from '../components/BrowserStatusPage';
 import { useNotifications } from '../context/NotificationContext';
 import { clearStore, deleteRecord, deleteRecords, getAllRecords, initializeDatabase, putRecord } from '../lib/db';
 import { displayUrl, getEmbeddingRestriction, getMixedContentRestriction, getYouTubeEmbedUrl, normalizeWebUrl } from '../lib/browser';
@@ -16,16 +18,29 @@ const quickLinks = [
   { title: 'NASA', url: 'https://www.nasa.gov', description: 'Discover beyond Earth' },
 ];
 
+type BrowserPanel = 'history' | 'bookmarks' | 'menu' | 'compatibility' | null;
+
 interface BrowserTab {
   id: string;
   url: string;
   stack: string[];
   index: number;
   loading: boolean;
+  stopped: boolean;
 }
 
 function newBrowserTab(): BrowserTab {
-  return { id: createId('tab'), url: HOME_URL, stack: [HOME_URL], index: 0, loading: false };
+  return { id: createId('tab'), url: HOME_URL, stack: [HOME_URL], index: 0, loading: false, stopped: false };
+}
+
+function restrictionFor(url: string): string | null {
+  if (url === HOME_URL) return null;
+  return getMixedContentRestriction(url, window.location.protocol)
+    ?? getEmbeddingRestriction(url, window.location.origin);
+}
+
+function shouldAttemptFrame(url: string): boolean {
+  return url !== HOME_URL && !restrictionFor(url) && navigator.onLine !== false;
 }
 
 export default function BrowserApp() {
@@ -34,14 +49,20 @@ export default function BrowserApp() {
   const [address, setAddress] = useState('');
   const [frameKey, setFrameKey] = useState(0);
   const [error, setError] = useState('');
-  const [panel, setPanel] = useState<'history' | 'bookmarks' | 'menu' | null>(null);
+  const [panel, setPanel] = useState<BrowserPanel>(null);
   const [history, setHistory] = useState<BrowserHistoryEntry[]>([]);
   const [bookmarks, setBookmarks] = useState<BrowserBookmark[]>([]);
+  const [online, setOnline] = useState(() => navigator.onLine !== false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const browserRootRef = useRef<HTMLDivElement>(null);
   const { notify } = useNotifications();
   const historyTotal = useRef(0);
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
-  const embeddingRestriction = activeTab.url === HOME_URL ? null : getEmbeddingRestriction(activeTab.url) ?? getMixedContentRestriction(activeTab.url, window.location.protocol);
+  const embeddingRestriction = restrictionFor(activeTab.url);
   const youtubeEmbedUrl = activeTab.url === HOME_URL ? null : getYouTubeEmbedUrl(activeTab.url);
+  const statusKind: BrowserStatusKind | null = activeTab.url === HOME_URL ? null
+    : embeddingRestriction ? 'external' : activeTab.stopped ? 'stopped' : !online ? 'offline' : null;
+  const canFullscreen = activeTab.url !== HOME_URL && !statusKind;
 
   const loadStorage = useCallback(async () => {
     try {
@@ -75,6 +96,30 @@ export default function BrowserApp() {
     setError('');
   }, [activeTab.url, activeTabId]);
 
+  useEffect(() => {
+    const updateOnlineStatus = () => {
+      const nextOnline = navigator.onLine !== false;
+      setOnline(nextOnline);
+      setTabs((current) => current.map((tab) => {
+        if (!nextOnline) return { ...tab, loading: false };
+        const resumesFrame = tab.url !== HOME_URL && !tab.stopped && !restrictionFor(tab.url);
+        return resumesFrame ? { ...tab, loading: true } : tab;
+      }));
+    };
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    return () => {
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    const updateFullscreen = () => setIsFullscreen(document.fullscreenElement === browserRootRef.current);
+    document.addEventListener('fullscreenchange', updateFullscreen);
+    return () => document.removeEventListener('fullscreenchange', updateFullscreen);
+  }, []);
+
   const updateActiveTab = (patch: Partial<BrowserTab>) => {
     setTabs((current) => current.map((tab) => tab.id === activeTab.id ? { ...tab, ...patch } : tab));
   };
@@ -86,7 +131,7 @@ export default function BrowserApp() {
       setError('');
       setPanel(null);
       setFrameKey((current) => current + 1);
-      updateActiveTab({ url, stack: nextStack, index: nextStack.length - 1, loading: url !== HOME_URL && !getEmbeddingRestriction(url) });
+      updateActiveTab({ url, stack: nextStack, index: nextStack.length - 1, loading: shouldAttemptFrame(url), stopped: false });
       if (url !== HOME_URL) {
         const entry: BrowserHistoryEntry = { id: createId('history'), url, title: displayUrl(url), visitedAt: new Date().toISOString() };
         try {
@@ -113,12 +158,18 @@ export default function BrowserApp() {
     if (!url) return;
     setFrameKey((current) => current + 1);
     setError('');
-    updateActiveTab({ url, index, loading: url !== HOME_URL && !getEmbeddingRestriction(url) });
+    updateActiveTab({ url, index, loading: shouldAttemptFrame(url), stopped: false });
   };
 
   const reload = () => {
     setFrameKey((current) => current + 1);
-    updateActiveTab({ loading: activeTab.url !== HOME_URL && !embeddingRestriction });
+    setError('');
+    updateActiveTab({ loading: shouldAttemptFrame(activeTab.url), stopped: false });
+  };
+
+  const stopLoading = () => {
+    setFrameKey((current) => current + 1);
+    updateActiveTab({ loading: false, stopped: true });
   };
 
   const addTab = () => {
@@ -159,9 +210,32 @@ export default function BrowserApp() {
 
   const openExternally = () => {
     if (activeTab.url === HOME_URL) return;
-    const opened = window.open(activeTab.url, '_blank', 'noopener,noreferrer');
-    if (opened) opened.opener = null;
-    else notify({ title: 'Pop-up blocked', message: 'Allow pop-ups for NOVA or copy the address into your browser.', tone: 'warning' });
+    try {
+      const url = normalizeWebUrl(activeTab.url);
+      const opened = window.open(url, '_blank', 'noopener,noreferrer');
+      if (opened) opened.opener = null;
+      else notify({ title: 'Pop-up blocked', message: 'Allow pop-ups for NOVA or copy the preserved address into your browser.', tone: 'warning' });
+    } catch (caught) {
+      notify({ title: 'Address not opened', message: errorMessage(caught), tone: 'error' });
+    }
+  };
+
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        if (!document.exitFullscreen) throw new Error('This browser cannot exit fullscreen programmatically.');
+        await document.exitFullscreen();
+        return;
+      }
+      if (!canFullscreen) return;
+      if (!browserRootRef.current?.requestFullscreen) {
+        notify({ title: 'Fullscreen unavailable', message: 'This browser or device does not support the Fullscreen API here. You can still maximize the NOVA window or open the site externally.', tone: 'info' });
+        return;
+      }
+      await browserRootRef.current.requestFullscreen();
+    } catch (caught) {
+      notify({ title: 'Fullscreen request was not completed', message: errorMessage(caught), tone: 'warning' });
+    }
   };
 
   const activeBookmark = bookmarks.find((bookmark) => bookmark.url === activeTab.url);
@@ -202,13 +276,13 @@ export default function BrowserApp() {
   };
 
   return (
-    <div className="flex h-full flex-col bg-[var(--app-bg)]">
+    <div ref={browserRootRef} className="browser-app flex h-full flex-col bg-[var(--app-bg)]">
       <div className="browser-tabbar flex h-10 shrink-0 items-center gap-1 border-b border-ink/[0.06] bg-black/5 px-2 pt-1">
         <div className="app-scroll flex min-w-0 flex-1 gap-1 overflow-x-auto" role="tablist" aria-label="Browser tabs" onKeyDown={handleTabListKeyDown}>
           {tabs.map((tab) => <div key={tab.id} className={`flex h-8 min-w-28 max-w-48 flex-1 items-center rounded-t-lg border-b-2 ${tab.id === activeTab.id ? 'border-nova-blue bg-ink/[0.075]' : 'border-transparent text-muted hover:bg-ink/[0.035]'}`}>
-            <button id={`browser-tab-${tab.id}`} className="flex h-full min-w-0 flex-1 items-center gap-2 px-2.5 text-left" onClick={() => { setActiveTabId(tab.id); setPanel(null); }} role="tab" tabIndex={tab.id === activeTab.id ? 0 : -1} aria-controls="browser-tabpanel" aria-selected={tab.id === activeTab.id} aria-label={tab.url === HOME_URL ? 'New tab' : displayUrl(tab.url)}>
-              {tab.url === HOME_URL ? <Home size={12} className="shrink-0" /> : <Globe2 size={12} className="shrink-0" />}
-              <span className="truncate text-[10px] text-ink/65">{tab.url === HOME_URL ? 'New tab' : displayUrl(tab.url)}</span>
+            <button id={`browser-tab-${tab.id}`} className="flex h-full min-w-0 flex-1 items-center gap-2 px-2.5 text-left" onClick={() => { setActiveTabId(tab.id); setPanel(null); }} role="tab" tabIndex={tab.id === activeTab.id ? 0 : -1} aria-controls="browser-tabpanel" aria-selected={tab.id === activeTab.id} aria-label={tab.url === HOME_URL ? 'New tab' : displayUrl(tab.url)} title={tab.url === HOME_URL ? 'New tab' : tab.url}>
+              {tab.url === HOME_URL ? <Home size={12} className="shrink-0" /> : tab.loading ? <LoaderCircle size={12} className="shrink-0 animate-spin" /> : restrictionFor(tab.url) ? <ExternalLink size={12} className="shrink-0" /> : <Globe2 size={12} className="shrink-0" />}
+              <span className="truncate text-[10px] text-ink/75">{tab.url === HOME_URL ? 'New tab' : displayUrl(tab.url)}</span>
             </button>
             <button className="mr-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted hover:bg-ink/[0.07] hover:text-ink/60" onClick={() => closeTab(tab.id)} aria-label={`Close ${tab.url === HOME_URL ? 'new tab' : displayUrl(tab.url)}`}><X size={11} /></button>
           </div>)}
@@ -219,11 +293,15 @@ export default function BrowserApp() {
       <div className="relative flex shrink-0 flex-wrap items-center gap-0.5 border-b border-ink/[0.06] bg-ink/[0.02] p-2 sm:flex-nowrap sm:gap-1">
         <button className="icon-button h-8 w-8" onClick={() => go(activeTab.index - 1)} disabled={activeTab.index <= 0} aria-label="Back"><ArrowLeft size={15} /></button>
         <button className="icon-button h-8 w-8" onClick={() => go(activeTab.index + 1)} disabled={activeTab.index >= activeTab.stack.length - 1} aria-label="Forward"><ArrowRight size={15} /></button>
-        <button className="icon-button h-8 w-8" onClick={reload} aria-label="Reload"><RotateCw size={14} className={activeTab.loading ? 'animate-spin' : ''} /></button>
+        <button className="icon-button h-8 w-8" onClick={activeTab.loading ? stopLoading : reload} aria-label={activeTab.loading ? 'Stop loading' : 'Reload'} title={activeTab.loading ? 'Stop loading' : 'Reload'}>
+          {activeTab.loading ? <X size={16} /> : <RotateCw size={14} />}
+        </button>
         <button className="icon-button hidden h-8 w-8 sm:flex" onClick={() => void navigate(HOME_URL)} aria-label="NOVA Browser home"><Home size={14} /></button>
         <form className="relative order-first mb-1 w-full min-w-0 flex-none sm:order-none sm:mx-1 sm:mb-0 sm:w-auto sm:flex-1" onSubmit={(event) => { event.preventDefault(); void navigate(address); }}>
-          <LockKeyhole size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-300/50" />
-          <input className="nova-input !min-h-8 !rounded-full !py-1.5 !pl-8 !pr-9 !text-[11px]" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Search or enter an HTTPS address" aria-label="Address and search bar" autoCapitalize="off" autoComplete="off" spellCheck={false} />
+          <span className="absolute left-3 top-1/2 -translate-y-1/2" title={activeTab.url.startsWith('https:') ? 'HTTPS address' : activeTab.url.startsWith('http:') ? 'Insecure HTTP address' : 'Search or enter an address'}>
+            {activeTab.url.startsWith('https:') ? <LockKeyhole size={12} className="text-emerald-300/60" /> : activeTab.url.startsWith('http:') ? <ShieldAlert size={12} className="text-amber-300/70" /> : <Search size={12} className="text-muted" />}
+          </span>
+          <input className="nova-input !min-h-8 !rounded-full !py-1.5 !pl-8 !pr-9 !text-[11px]" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Search or enter an HTTP/HTTPS address" aria-label="Address and search bar" autoCapitalize="off" autoComplete="off" spellCheck={false} />
           {address && <button type="button" className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-muted hover:bg-ink/[0.06]" onClick={() => setAddress('')} aria-label="Clear address"><X size={12} /></button>}
         </form>
         <span className="flex-1 sm:hidden" aria-hidden="true" />
@@ -232,9 +310,11 @@ export default function BrowserApp() {
         <button className="icon-button h-8 w-8" data-active={panel === 'history'} onClick={() => setPanel((current) => current === 'history' ? null : 'history')} aria-label="Browsing history" aria-expanded={panel === 'history'}><Clock3 size={15} /></button>
         <button className="icon-button h-8 w-8 sm:hidden" data-active={panel === 'menu'} onClick={() => setPanel((current) => current === 'menu' ? null : 'menu')} aria-label="Browser menu" aria-expanded={panel === 'menu'}><MoreHorizontal size={17} /></button>
         <button className="icon-button hidden h-8 w-8 md:flex" onClick={openExternally} disabled={activeTab.url === HOME_URL} aria-label="Open in a new browser tab" title="Open externally"><ExternalLink size={14} /></button>
-        {activeTab.loading && <span className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden"><span className="block h-full w-1/2 animate-pulse bg-gradient-to-r from-transparent via-nova-blue to-transparent" /></span>}
+        <button className="icon-button hidden h-8 w-8 md:flex" data-active={panel === 'compatibility'} onClick={() => setPanel((current) => current === 'compatibility' ? null : 'compatibility')} aria-label="Site compatibility and privacy" aria-expanded={panel === 'compatibility'} title="Site compatibility"><ShieldCheck size={14} /></button>
+        <button className="icon-button hidden h-8 w-8 lg:flex" onClick={() => void toggleFullscreen()} disabled={!canFullscreen && !isFullscreen} aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>{isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>
+        {activeTab.loading && <><span className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden"><span className="block h-full w-1/2 animate-pulse bg-gradient-to-r from-transparent via-nova-blue to-transparent" /></span><span className="sr-only" role="status">Loading {displayUrl(activeTab.url)}</span></>}
       </div>
-      {error && <div className="flex shrink-0 items-center gap-2 border-b border-red-300/10 bg-red-300/[0.06] px-3 py-2 text-[11px] text-red-200" role="alert"><ShieldCheck size={13} />{error}</div>}
+      {error && <div className="flex shrink-0 items-center gap-2 border-b border-red-300/10 bg-red-300/[0.06] px-3 py-2 text-[11px] text-red-200" role="alert"><ShieldAlert size={13} />{error}</div>}
 
       <div id="browser-tabpanel" role="tabpanel" aria-labelledby={`browser-tab-${activeTab.id}`} className="relative min-h-0 flex-1">
         {activeTab.url === HOME_URL ? <div className="app-scroll h-full overflow-y-auto bg-[radial-gradient(ellipse_at_top,rgba(var(--accent-rgb),0.08),transparent_55%)] p-5 sm:p-8">
@@ -247,20 +327,14 @@ export default function BrowserApp() {
             {bookmarks.length > 0 && <div className="mt-6 text-left"><div className="flex items-center gap-2"><Bookmark size={13} className="accent-text" /><h3 className="text-[11px] font-medium text-ink/65">Your bookmarks</h3></div><div className="mt-2 flex gap-2 overflow-x-auto pb-2 app-scroll">{bookmarks.map((bookmark) => <button key={bookmark.id} className="nova-card flex shrink-0 items-center gap-2 px-3 py-2 text-[10px] text-ink/65 hover:bg-ink/[0.05]" onClick={() => void navigate(bookmark.url)}><Star size={11} className="text-amber-300/70" />{bookmark.title}</button>)}</div></div>}
             <div className="mx-auto mt-6 max-w-lg rounded-xl border border-ink/[0.06] bg-black/5 p-3.5 text-left"><div className="flex items-center gap-2 text-[11px] font-medium text-ink/65"><ShieldCheck size={14} className="text-emerald-300/60" /> Honest browser boundaries</div><p className="mt-2 text-[10px] leading-5 text-muted">NOVA uses your browser’s engine and a sandboxed frame. YouTube video links use the official embed player. Known blocked pages use an external-only screen; other sites may also require “Open externally.” NOVA is not a VPN or a privacy proxy.</p></div>
           </div>
-        </div> : embeddingRestriction ? <div className="app-scroll h-full overflow-y-auto bg-[radial-gradient(ellipse_at_top,rgba(var(--accent-rgb),0.08),transparent_55%)] p-5" role="status">
-          <div className="mx-auto flex min-h-full max-w-md flex-col items-center justify-center py-6 text-center">
-            <span className="accent-surface flex h-14 w-14 items-center justify-center rounded-2xl"><ExternalLink size={25} /></span>
-            <p className="eyebrow mt-5">EXTERNAL-ONLY PAGE</p>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight text-ink/85">Open this site in a normal browser tab</h2>
-            <p className="mt-3 text-xs leading-6 text-ink/65">{embeddingRestriction}</p>
-            <p className="mt-2 text-[11px] leading-5 text-muted">NOVA cannot override another site’s X-Frame-Options or Content-Security-Policy. Instead of showing a broken frame, NOVA can hand the address to your browser.</p>
-            <p className="mt-4 line-clamp-2 max-w-full break-all rounded-lg bg-ink/[0.035] px-3 py-2 text-[10px] text-muted" title={activeTab.url}>{activeTab.url}</p>
-            <div className="mt-6 flex w-full flex-col justify-center gap-2 sm:w-auto sm:flex-row">
-              <button className="nova-button" onClick={openExternally}><ExternalLink size={16} /> Open externally</button>
-              <button className="nova-button nova-button-secondary" onClick={() => void navigate(HOME_URL)}><Home size={15} /> NOVA Browser home</button>
-            </div>
-          </div>
-        </div> : <>
+        </div> : statusKind ? <BrowserStatusPage
+          kind={statusKind}
+          url={activeTab.url}
+          description={statusKind === 'external' ? embeddingRestriction ?? undefined : undefined}
+          onOpenExternally={openExternally}
+          onReload={reload}
+          onHome={() => void navigate(HOME_URL)}
+        /> : <>
           <iframe
             key={`${activeTab.id}-${activeTab.url}-${frameKey}`}
             src={youtubeEmbedUrl ?? activeTab.url}
@@ -268,18 +342,18 @@ export default function BrowserApp() {
             className="h-full w-full border-0 bg-white"
             sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-downloads"
             referrerPolicy={youtubeEmbedUrl ? 'strict-origin-when-cross-origin' : 'no-referrer'}
-            allow={youtubeEmbedUrl ? 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share' : undefined}
-            allowFullScreen={Boolean(youtubeEmbedUrl)}
+            allow={youtubeEmbedUrl ? 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen' : 'fullscreen'}
+            allowFullScreen
             onLoad={() => setTabs((current) => current.map((tab) => tab.id === activeTab.id ? { ...tab, loading: false } : tab))}
           />
-          {!youtubeEmbedUrl && <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-2"><div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full border border-ink/10 bg-[var(--editor-bg)] px-3 py-1.5 text-[9px] text-muted shadow-lg backdrop-blur-md"><span className="truncate">If this page is blank, the site may block embedded viewing.</span><button className="pointer-events-auto flex shrink-0 items-center gap-1 text-nova-blue hover:text-ink" onClick={openExternally}>Open externally <ExternalLink size={10} /></button></div></div>}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-2"><div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full border border-ink/10 bg-[var(--editor-bg)] px-3 py-1.5 text-[9px] text-muted shadow-lg backdrop-blur-md"><button className="pointer-events-auto truncate hover:text-ink" onClick={() => setPanel('compatibility')}>Embedded page not appearing?</button><button className="pointer-events-auto flex shrink-0 items-center gap-1 text-nova-blue hover:text-ink" onClick={openExternally}>Open externally <ExternalLink size={10} /></button></div></div>
         </>}
 
-        {panel && <aside className="absolute inset-y-0 right-0 z-20 flex w-[min(330px,92%)] flex-col border-l border-ink/[0.08] bg-[var(--editor-bg)] shadow-2xl">
+        {panel && <aside className="absolute inset-y-0 right-0 z-20 flex w-[min(350px,94%)] flex-col border-l border-ink/[0.08] bg-[var(--editor-bg)] shadow-2xl">
           <div className="flex items-center border-b border-ink/[0.06] p-3">
             <div className="flex-1">
-              <p className="eyebrow">{panel === 'history' ? 'LOCAL HISTORY' : panel === 'bookmarks' ? 'SAVED PAGES' : 'BROWSER MENU'}</p>
-              <h3 className="mt-1 text-xs font-semibold">{panel === 'history' ? 'Recent addresses' : panel === 'bookmarks' ? 'Bookmarks' : 'More actions'}</h3>
+              <p className="eyebrow">{panel === 'history' ? 'LOCAL HISTORY' : panel === 'bookmarks' ? 'SAVED PAGES' : panel === 'compatibility' ? 'SITE COMPATIBILITY' : 'BROWSER MENU'}</p>
+              <h3 className="mt-1 text-xs font-semibold">{panel === 'history' ? 'Recent addresses' : panel === 'bookmarks' ? 'Bookmarks' : panel === 'compatibility' ? 'Embedding & privacy' : 'More actions'}</h3>
             </div>
             {panel === 'history' && <button className="icon-button" onClick={() => void clearHistory()} disabled={!history.length} aria-label="Clear browsing history"><Trash2 size={14} /></button>}
             <button className="icon-button" onClick={() => setPanel(null)} aria-label={`Close ${panel}`}><X size={15} /></button>
@@ -288,8 +362,20 @@ export default function BrowserApp() {
             {panel === 'menu' ? <nav className="space-y-1" aria-label="Additional browser actions">
               <button className="flex w-full items-center gap-3 rounded-lg p-3 text-left text-xs text-ink/65 hover:bg-ink/[0.04]" onClick={() => void navigate(HOME_URL)}><Home size={16} className="accent-text" />NOVA Browser home</button>
               <button className="flex w-full items-center gap-3 rounded-lg p-3 text-left text-xs text-ink/65 hover:bg-ink/[0.04]" onClick={() => setPanel('bookmarks')}><Bookmark size={16} className="accent-text" />Bookmarks<span className="ml-auto text-[10px] text-muted">{bookmarks.length}</span></button>
+              <button className="flex w-full items-center gap-3 rounded-lg p-3 text-left text-xs text-ink/65 hover:bg-ink/[0.04]" onClick={() => setPanel('compatibility')}><ShieldCheck size={16} className="accent-text" />Site compatibility & privacy</button>
+              <button className="flex w-full items-center gap-3 rounded-lg p-3 text-left text-xs text-ink/65 hover:bg-ink/[0.04]" onClick={() => { setPanel(null); void toggleFullscreen(); }} disabled={!canFullscreen && !isFullscreen}><Maximize2 size={16} className="accent-text" />{isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}</button>
               <button className="flex w-full items-center gap-3 rounded-lg p-3 text-left text-xs text-ink/65 hover:bg-ink/[0.04]" onClick={() => { setPanel(null); openExternally(); }} disabled={activeTab.url === HOME_URL}><ExternalLink size={16} className="accent-text" />Open in a new browser tab</button>
-            </nav> : panel === 'history' ? <>
+            </nav> : panel === 'compatibility' ? <div className="space-y-3 p-2">
+              <div className="rounded-xl border border-ink/[0.07] bg-ink/[0.025] p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-ink/75"><ShieldCheck size={15} className="accent-text" />Honest embed status</div>
+                <p className="mt-2 text-[11px] leading-5 text-muted">{embeddingRestriction ?? (!online ? 'Your browser reports that it is offline. NOVA has not attempted this embedded load.' : 'NOVA is attempting a sandboxed embedded view. A frame load event is not proof that cross-origin content rendered; NOVA cannot inspect the remote document.')}</p>
+                {activeTab.url !== HOME_URL && <p className="mt-3 break-all rounded-lg bg-ink/[0.035] p-2 text-[9px] text-muted">{activeTab.url}</p>}
+                <button className="nova-button nova-button-secondary mt-3 w-full" onClick={openExternally} disabled={activeTab.url === HOME_URL}><ExternalLink size={14} /> Open preserved address externally</button>
+              </div>
+              <div className="rounded-xl border border-ink/[0.07] p-3"><h4 className="text-[11px] font-semibold text-ink/70">Iframe restrictions</h4><p className="mt-1.5 text-[10px] leading-5 text-muted">X-Frame-Options and CSP frame-ancestors let a destination refuse embedding. NOVA respects those rules and never proxies around them.</p></div>
+              <div className="rounded-xl border border-ink/[0.07] p-3"><h4 className="text-[11px] font-semibold text-ink/70">CORS is different</h4><p className="mt-1.5 text-[10px] leading-5 text-muted">CORS normally limits cross-origin data access, not ordinary iframe navigation. The same-origin policy prevents NOVA from reading a remote page’s content, response status, title, or in-frame URL.</p></div>
+              <div className="rounded-xl border border-ink/[0.07] p-3"><h4 className="text-[11px] font-semibold text-ink/70">Accounts & browser APIs</h4><p className="mt-1.5 text-[10px] leading-5 text-muted">Sign-in, third-party cookies, CAPTCHA, region rules, DRM, and site permissions remain controlled by the destination and your browser. NOVA disables camera, microphone, and geolocation at its deployment boundary.</p></div>
+            </div> : panel === 'history' ? <>
               {history.map((entry) => <button key={entry.id} className="w-full rounded-lg p-2.5 text-left hover:bg-ink/[0.04]" onClick={() => void navigate(entry.url)}><span className="block truncate text-xs text-ink/65">{entry.title}</span><span className="mt-1 block text-[9px] text-muted">{formatDateTime(entry.visitedAt)}</span></button>)}
               {!history.length && <p className="p-8 text-center text-xs text-muted">No local history yet.</p>}
             </> : <>
@@ -297,7 +383,7 @@ export default function BrowserApp() {
               {!bookmarks.length && <div className="p-8 text-center"><Star size={22} className="mx-auto text-ink/15" /><p className="mt-3 text-xs text-muted">No bookmarks yet.</p><p className="mt-1.5 text-[10px] text-muted">Use the star in the address bar to save a page.</p></div>}
             </>}
           </div>
-          {panel !== 'menu' && <p className="border-t border-ink/[0.055] p-3 text-[9px] leading-4 text-muted">{panel === 'history' ? 'Only submitted addresses are recorded. History is stored locally and can be cleared here.' : 'Bookmarks persist in IndexedDB and are included in NOVA JSON backups.'}</p>}
+          {(panel === 'history' || panel === 'bookmarks') && <p className="border-t border-ink/[0.055] p-3 text-[9px] leading-4 text-muted">{panel === 'history' ? 'Only submitted addresses are recorded. History is stored locally and can be cleared here.' : 'Bookmarks persist in IndexedDB and are included in NOVA JSON backups.'}</p>}
         </aside>}
       </div>
     </div>
