@@ -53,6 +53,7 @@ export interface NovaPreferences {
   clock24h: boolean;
   dockPinned: AppId[];
   recentApps: AppId[];
+  recentOfficeFiles: string[];
   removedApps: AppId[];
 }
 

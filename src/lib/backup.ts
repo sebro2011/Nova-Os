@@ -3,6 +3,9 @@ import { isValidDateKey } from './calendar';
 import { validateFileName } from './files';
 import { sanitizePreferences } from './preferences';
 import { validateWebsiteShortcuts } from './websites';
+import { MAX_NATIVE_OFFICE_CHARS, MAX_PDF_DATA_URL_CHARS, officeKindFromMime } from '../apps/office/core/file-formats/constants';
+import { validateNativeOfficeContent } from '../apps/office/core/file-formats/native';
+import { validatePdfDataUrl } from '../apps/office/core/file-formats/pdf';
 
 export const MAX_BACKUP_FILE_BYTES = 64 * 1024 * 1024;
 
@@ -58,12 +61,18 @@ function validateFiles(value: unknown): FileNode[] {
     const parentId = input.parentId === null ? null : text(input.parentId, `File ${index + 1} parent`, 140, false);
     const mimeType = text(input.mimeType, `File ${index + 1} MIME type`, 120);
     if (/[\u0000-\u001f]/.test(mimeType)) throw new Error('Invalid MIME type.');
+    const officeKind = officeKindFromMime(mimeType);
+    const content = kind === 'file'
+      ? text(input.content, `File ${index + 1} content`, officeKind === 'pdf' ? MAX_PDF_DATA_URL_CHARS : officeKind ? MAX_NATIVE_OFFICE_CHARS : 1_000_000)
+      : '';
+    if (kind === 'file' && officeKind === 'pdf') validatePdfDataUrl(content);
+    else if (kind === 'file' && officeKind) validateNativeOfficeContent(mimeType, content);
     return {
       id,
       parentId,
       name: validateFileName(text(input.name, `File ${index + 1} name`, 80, false)),
       kind,
-      content: kind === 'file' ? text(input.content, `File ${index + 1} content`, 1_000_000) : '',
+      content,
       mimeType: kind === 'file' ? mimeType : '',
       createdAt: isoDate(input.createdAt, `File ${index + 1} creation date`),
       updatedAt: isoDate(input.updatedAt, `File ${index + 1} update date`),
