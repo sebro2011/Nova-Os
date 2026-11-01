@@ -5,6 +5,8 @@ import { clamp } from '../lib/utils';
 
 export function useWindowManager(workspaceRef: RefObject<HTMLDivElement>) {
   const [windows, setWindows] = useState<NovaWindow[]>([]);
+  const windowsRef = useRef<NovaWindow[]>([]);
+  windowsRef.current = windows;
   const nextZ = useRef(10);
 
   const focusWindow = useCallback((id: string) => {
@@ -39,7 +41,12 @@ export function useWindowManager(workspaceRef: RefObject<HTMLDivElement>) {
   }, [workspaceRef]);
 
   const closeWindow = useCallback((id: string) => {
-    setWindows((current) => current.filter((item) => item.id !== id));
+    const item = windowsRef.current.find((windowItem) => windowItem.id === id);
+    if (item) {
+      const request = new CustomEvent('nova:before-close-window', { cancelable: true, detail: { id, appId: item.appId } });
+      if (!window.dispatchEvent(request)) return;
+    }
+    setWindows((current) => current.filter((windowItem) => windowItem.id !== id));
   }, []);
 
   const minimizeWindow = useCallback((id: string) => {

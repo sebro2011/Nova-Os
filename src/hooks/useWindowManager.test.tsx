@@ -34,6 +34,19 @@ describe('window manager', () => {
     expect(result.current.windows.map((item) => item.appId)).toEqual(['notes']);
   });
 
+  it('honors an app close guard before removing a window', () => {
+    const { result } = renderHook(() => useWindowManager(workspaceRef()));
+    act(() => result.current.openApp('files'));
+    const guard = (event: Event) => event.preventDefault();
+    window.addEventListener('nova:before-close-window', guard);
+    try {
+      act(() => result.current.closeWindow('window-files'));
+      expect(result.current.windows).toHaveLength(1);
+    } finally {
+      window.removeEventListener('nova:before-close-window', guard);
+    }
+  });
+
   it('updates bounds for drag and resize gestures', () => {
     const { result } = renderHook(() => useWindowManager(workspaceRef()));
     act(() => result.current.openApp('files'));

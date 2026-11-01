@@ -44,6 +44,17 @@ export function getYouTubeEmbedUrl(url: string): string | null {
   }
 }
 
+export function getMixedContentRestriction(url: string, parentProtocol: string): string | null {
+  try {
+    const parsed = new URL(url);
+    return parentProtocol === 'https:' && parsed.protocol === 'http:'
+      ? 'This insecure HTTP address cannot be embedded inside NOVA’s HTTPS session. Open it externally so the browser can apply its own security protections.'
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Known hard blocks only; other sites may still refuse framed embedding. */
 export function getEmbeddingRestriction(url: string): string | null {
   try {

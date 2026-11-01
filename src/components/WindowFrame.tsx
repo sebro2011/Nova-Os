@@ -1,7 +1,8 @@
-import { Suspense, useRef, type PointerEvent as ReactPointerEvent } from 'react';
+import { Suspense, useRef, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Loader2, Minus, Square, X } from 'lucide-react';
 import { appRegistry } from '../apps/registry';
+import { AppErrorBoundary } from './AppErrorBoundary';
 import { usePreferences } from '../context/PreferencesContext';
 import { clamp } from '../lib/utils';
 import type { NovaWindow, WindowBounds } from '../types';
@@ -89,6 +90,38 @@ export function WindowFrame({ window: item, mobile, focused, onFocus, onClose, o
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
+  const handleKeyboard = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (mobile || item.maximized || !event.altKey || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    if ((event.target as HTMLElement).matches('input, textarea, select, [contenteditable="true"]')) return;
+    const rect = workspaceRect();
+    if (!rect) return;
+    event.preventDefault();
+    onFocus();
+    const step = event.shiftKey ? 24 : 16;
+    const horizontal = event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0;
+    const vertical = event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0;
+    const availableX = Math.max(0, rect.width - item.width);
+    const availableY = Math.max(0, rect.height - item.height);
+    const minX = Math.min(8, availableX);
+    const minY = Math.min(8, availableY);
+    const boundedX = clamp(item.x, minX, Math.max(minX, availableX));
+    const boundedY = clamp(item.y, minY, Math.max(minY, availableY));
+    if (event.shiftKey) {
+      const minWidth = Math.min(340, rect.width);
+      const minHeight = Math.min(250, rect.height);
+      const width = clamp(item.width + horizontal, minWidth, Math.max(minWidth, rect.width - boundedX));
+      const height = clamp(item.height + vertical, minHeight, Math.max(minHeight, rect.height - boundedY));
+      onBoundsChange({ x: boundedX, y: boundedY, width, height });
+    } else {
+      onBoundsChange({
+        x: clamp(boundedX + horizontal, minX, Math.max(minX, availableX)),
+        y: clamp(boundedY + horizontal, minY, Math.max(minY, availableY)),
+        width: item.width,
+        height: item.height,
+      });
+    }
+  };
+
   const style = mobile
     ? { left: 0, top: 0, width: '100%', height: '100%', zIndex: item.zIndex }
     : item.maximized
@@ -109,10 +142,14 @@ export function WindowFrame({ window: item, mobile, focused, onFocus, onClose, o
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={systemReducedMotion || preferences.reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: 5 }}
       transition={{ duration: systemReducedMotion || preferences.reduceMotion ? 0 : 0.16 }}
-      onPointerDown={onFocus}
+      onPointerDown={() => { if (!focused) onFocus(); }}
+      onFocusCapture={() => { if (!focused) onFocus(); }}
+      onKeyDown={handleKeyboard}
     >
       <div
         className="window-titlebar flex h-12 shrink-0 cursor-default items-center gap-3 border-b border-ink/[0.075] bg-ink/[0.025] px-3"
+        tabIndex={0}
+        aria-label={`${definition.title} window controls. Alt and arrow keys move; Alt, Shift, and arrow keys resize.`}
         onPointerDown={beginDrag}
         onPointerMove={moveGesture}
         onPointerUp={endGesture}
@@ -132,9 +169,11 @@ export function WindowFrame({ window: item, mobile, focused, onFocus, onClose, o
         </div>
       </div>
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        <Suspense fallback={<div className="flex h-full items-center justify-center gap-2 text-xs text-ink/45"><Loader2 size={17} className="animate-spin" /> Loading {definition.title}…</div>}>
-          <AppComponent />
-        </Suspense>
+        <AppErrorBoundary appId={item.appId}>
+          <Suspense fallback={<div className="flex h-full items-center justify-center gap-2 text-xs text-muted"><Loader2 size={17} className="animate-spin" /> Loading {definition.title}…</div>}>
+            <AppComponent />
+          </Suspense>
+        </AppErrorBoundary>
       </div>
       {!mobile && !item.maximized && resizeDirections.map((direction) => {
         const positioning: Record<string, string> = {

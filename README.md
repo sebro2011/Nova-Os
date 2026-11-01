@@ -13,7 +13,8 @@ A lightweight, responsive, local-first desktop environment that runs entirely in
 - Desktop icons, app launcher, dock, taskbar, system tray, clock, quick settings, and notification center
 - Multi-window manager with focus, drag, eight-direction resize, minimize, maximize/restore, and close
 - **Mobile phone layout:** edge-to-edge app windows, portrait/landscape adaptation, safe-area support, larger touch controls, mobile browser menus, and touch-friendly Files navigation
-- Global search across apps, virtual files, notes, and events (`Ctrl + K`)
+- Global search across apps, virtual files, notes, events, and settings (`Ctrl + K`), with direct record/section opening
+- Installable production app shell with manifest icons, offline static-asset caching, and a user-controlled update prompt
 - **Files:** virtual folders and plain-text files, rename, safe Trash/restore, permanent-delete confirmation, text import, and download
 - **NOVA Browser:** up to eight session tabs, persistent bookmarks, HTTP/HTTPS navigation, search, back/forward, clearable local history, sandboxed frames, an official privacy-enhanced YouTube player, and a dedicated external-only screen for Google Search
 - **Terminal:** a restricted custom command interpreter—not a system shell
@@ -74,7 +75,10 @@ The deployable static site is generated in `dist/`.
 ```text
 Nova-Os/
 ├── public/
-│   └── favicon.svg
+│   ├── icons/                # PNG, maskable, and Apple touch icons
+│   ├── favicon.svg
+│   ├── manifest.webmanifest
+│   └── sw.js                 # Production app-shell/static-asset worker
 ├── src/
 │   ├── apps/                 # Lazy-loaded app windows and app registry
 │   │   ├── FilesApp.tsx
@@ -113,7 +117,7 @@ Nova-Os/
 - Safe-area insets protect controls from notches and home indicators. Dynamic viewport units, scrollable overlays, 44 px coarse-pointer controls, and 16 px phone form fields improve keyboard and touch usability.
 - Desktop-sized screens retain the original movable, resizable, multi-window interface.
 
-Mobile browser chrome and virtual keyboards still reduce the available workspace. Add-to-home-screen behavior is controlled by the host browser; NOVA does not include a native mobile package or an offline service worker.
+Mobile browser chrome and virtual keyboards still reduce the available workspace. Add-to-home-screen and standalone installation behavior are controlled by the host browser; NOVA does not include a native mobile package. The production service worker is registered only for production builds, not the development server.
 
 ## Keyboard shortcuts
 
@@ -123,6 +127,9 @@ Mobile browser chrome and virtual keyboards still reduce the available workspace
 | `Ctrl + Alt + T` | Open restricted Terminal |
 | `Alt + M` | Minimize active window |
 | `Alt + W` | Close active window |
+| `Alt + Arrow keys` | Move a focused desktop window |
+| `Alt + Shift + Arrow keys` | Resize a focused desktop window |
+| `Arrow keys` in Browser tabs | Switch NOVA Browser tabs |
 | `F1` | Open Help Center |
 | `Escape` | Close menus and overlays |
 | `Enter` | Open a focused desktop item or search result |
@@ -141,9 +148,19 @@ IndexedDB contains these object stores:
 - `wallpapers`: user-uploaded PNG, JPEG, and WebP image blobs
 - `meta`: database initialization metadata
 
-Preferences are stored separately in LocalStorage. Media Player uses temporary object URLs; its queue is **not persisted**.
+Preferences are stored separately in LocalStorage. Media Player uses temporary object URLs; its queue is **not persisted**. Browser history is pruned to the newest 450 entries when it grows beyond 500, and can also be cleared explicitly.
 
-Use **Settings → Data → Export backup** regularly. Backups are unencrypted JSON and may contain personal notes, events, file contents, browsing addresses, and bookmarks. Import is limited to 8 MB, validates the complete schema and relationships, reconstructs plain objects, shows a preview, and requires confirmation before replacing current data. Custom wallpaper image blobs are **not** included in JSON backups and remain on the current browser origin.
+Use **Settings → Data → Export backup** regularly. Backups are unencrypted JSON and may contain personal notes, events, file contents, browsing addresses, and bookmarks. Export and import share a 64 MB safety limit. Import validates the complete schema and relationships, migrates legacy root-only backups by adding Home, reconstructs plain objects, shows a preview, and requires confirmation before replacing current data. Custom wallpaper image blobs are **not** included in JSON backups and remain on the current browser origin.
+
+## Installability and offline behavior
+
+The production build includes a web app manifest, 192/512 px PNG icons, a maskable icon, an Apple touch icon, and `public/sw.js`. After a successful online production load, the worker caches the app shell and same-origin static assets requested by NOVA. Navigation uses the network first and falls back to the cached shell offline.
+
+- Lazy app chunks are available offline only after they have been loaded and cached once.
+- External websites, YouTube, and other cross-origin content are not cached or made offline.
+- IndexedDB records and localStorage preferences remain in their normal browser stores; the worker does not copy them into Cache Storage.
+- A waiting worker is activated only after the user chooses **Update and reload**. Updating does not intentionally clear user data.
+- Service-worker registration is disabled during Vite development. Test offline behavior with `npm run build` followed by `npm run preview` in a service-worker-capable browser.
 
 ## Security model
 
@@ -179,12 +196,14 @@ For the target Windows 10 PC (Intel Core i5-3330, 8 GB RAM, GTX 960 2 GB), use a
 Executed for the current implementation:
 
 - `npm run typecheck` — passed
-- `npm test` — **11 test files, 38 tests passed** (including YouTube player adaptation, Browser external-only/embedding, responsive window-frame, media-query, window-manager, preference-migration, and backup-validation regressions)
+- `npm test` — **19 test files, 55 tests passed** (including Notes autosave races, Files close guards, IndexedDB lifecycle, deep-link search, modal focus, Dock limits, Media object URLs, YouTube adaptation, responsive windows, and backup migration)
 - `npm run build` — passed; static output generated successfully
-- `npm audit` — **0 dependency vulnerabilities reported** after upgrading to Vite 8.3.5 and Vitest 5.0.5
+- `npm run test:pwa` — manifest, real PNG dimensions, maskable assets, worker boundaries, update-cache headers, and production artifacts validated
+- Production preview HTTP smoke — app, SPA fallback, manifest, worker, and icons returned 200; `node --check public/sw.js` passed
+- `npm audit` — **0 dependency vulnerabilities reported** with the current lockfile
 - Source scan — no dangerous HTML injection, `eval`, `Function` constructor, or shell-execution APIs in application source
 
-These results describe the checks actually run in the implementation environment, not a guarantee for every browser or device. Run the commands again after changes.
+These results describe the checks actually run in the implementation environment, not a guarantee for every browser or device. Run the commands again after changes. No local browser executable was available for this implementation pass, so real-browser visual, screen-reader, install prompt, and offline-device behavior were not claimed as tested.
 
 ## Known limitations
 
@@ -198,7 +217,7 @@ These results describe the checks actually run in the implementation environment
 - The terminal is intentionally simulated and restricted; it cannot run CMD, PowerShell, Bash, packages, or user code.
 - Hardware performance gauges are simulated, not genuine Task Manager telemetry.
 - Notifications are session-only; there is no push service, cloud sync, account system, or multi-device synchronization.
-- NOVA is not a native Android/iOS package and has no offline service worker. Add-to-home-screen and standalone-display behavior varies by browser.
+- NOVA is not a native Android/iOS package. Installation and standalone behavior vary by browser. Offline support covers the cached app shell and previously loaded same-origin app assets, not arbitrary external websites or never-loaded lazy chunks.
 - One window instance per built-in app is currently used; multiple different apps can be arranged simultaneously.
 
 ## Deploy to Vercel

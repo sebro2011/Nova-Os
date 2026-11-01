@@ -9,11 +9,12 @@ import { useWindowManager } from '../hooks/useWindowManager';
 import { usePhoneLayout } from '../hooks/useMediaQuery';
 import { getRecord, initializeDatabase } from '../lib/db';
 import { errorMessage } from '../lib/utils';
-import type { AppId, WallpaperRecord } from '../types';
+import type { AppId, AppLaunchIntent, WallpaperRecord } from '../types';
 import { BootScreen } from './BootScreen';
 import { DesktopWallpaper } from './DesktopWallpaper';
 import { Dock } from './Dock';
 import { NotificationCenter } from './NotificationCenter';
+import { PwaManager } from './PwaManager';
 import { QuickSettings } from './QuickSettings';
 import { SearchPalette } from './SearchPalette';
 import { StartMenu } from './StartMenu';
@@ -38,13 +39,31 @@ export function DesktopShell() {
   const [customWallpaperUrl, setCustomWallpaperUrl] = useState('');
   const workspaceRef = useRef<HTMLDivElement>(null);
   const storageAttempted = useRef(false);
-  const { preferences } = usePreferences();
+  const { preferences, updatePreferences } = usePreferences();
+  const preferencesRef = useRef(preferences);
+  preferencesRef.current = preferences;
   const { notify } = useNotifications();
   const isPhone = usePhoneLayout();
   const {
-    windows, activeWindow, openApp, closeWindow, closeActiveWindow,
+    windows, activeWindow, openApp: showApp, closeWindow, closeActiveWindow,
     minimizeWindow, toggleMaximize, focusWindow, updateBounds,
   } = useWindowManager(workspaceRef);
+  const [launchIntents, setLaunchIntents] = useState<Partial<Record<AppId, AppLaunchIntent>>>({});
+  const openApp = useCallback((appId: AppId, intent?: AppLaunchIntent) => {
+    if (intent) setLaunchIntents((current) => ({ ...current, [appId]: intent }));
+    const recentApps = [appId, ...preferencesRef.current.recentApps.filter((id) => id !== appId)].slice(0, 5);
+    updatePreferences({ recentApps });
+    showApp(appId);
+  }, [showApp, updatePreferences]);
+  const consumeLaunchIntent = useCallback((appId: AppId) => {
+    const intent = launchIntents[appId];
+    if (intent) setLaunchIntents((current) => {
+      const next = { ...current };
+      delete next[appId];
+      return next;
+    });
+    return intent;
+  }, [launchIntents]);
 
   const finishBoot = useCallback(() => setEntered(true), []);
   const togglePanel = useCallback((name: Exclude<PanelName, null>) => {
@@ -76,13 +95,14 @@ export function DesktopShell() {
     }).catch((error) => {
       if (!active) return;
       setCustomWallpaperUrl('');
-      notify({ title: 'Custom wallpaper unavailable', message: errorMessage(error), tone: 'warning' });
+      updatePreferences({ wallpaper: 'aurora', customWallpaperId: null });
+      notify({ title: 'Custom wallpaper unavailable', message: `${errorMessage(error)} NOVA switched to Aurora without changing your other data.`, tone: 'warning' });
     });
     return () => {
       active = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [preferences.wallpaper, preferences.customWallpaperId, notify]);
+  }, [preferences.wallpaper, preferences.customWallpaperId, notify, updatePreferences]);
 
   useEffect(() => {
     if (!entered) return;
@@ -124,7 +144,7 @@ export function DesktopShell() {
     return () => window.removeEventListener('keydown', handleShortcut);
   }, [entered, activeWindow, closeWindow, minimizeWindow, openApp]);
 
-  const launchValue = useMemo(() => ({ openApp, closeActiveWindow }), [openApp, closeActiveWindow]);
+  const launchValue = useMemo(() => ({ openApp, closeActiveWindow, consumeLaunchIntent }), [openApp, closeActiveWindow, consumeLaunchIntent]);
   const openFromDesktop = (event: MouseEvent<HTMLButtonElement>, appId: AppId) => {
     if (event.detail === 0 || window.matchMedia('(pointer: coarse)').matches) openApp(appId);
   };
@@ -178,7 +198,7 @@ export function DesktopShell() {
             <section className="pointer-events-none absolute bottom-7 right-6 hidden max-w-xs text-right md:block">
               <p className="eyebrow">YOUR LOCAL UNIVERSE</p>
               <h1 className="mt-2 text-2xl font-light tracking-tight text-ink/75">Beyond Earth.<br /><span className="font-semibold text-ink/90">Beyond Limits.</span></h1>
-              <p className="mt-3 text-[11px] leading-5 text-ink/35">Double-click a desktop icon or press <span className="text-ink/55">Ctrl + K</span> to begin.</p>
+              <p className="mt-3 text-[11px] leading-5 text-muted">Double-click a desktop icon or press <span className="text-ink/65">Ctrl + K</span> to begin.</p>
             </section>
           )}
 
@@ -214,6 +234,7 @@ export function DesktopShell() {
         {panel === 'notifications' && <NotificationCenter onClose={() => setPanel(null)} />}
         {panel === 'tray' && <QuickSettings onClose={() => setPanel(null)} onOpenSettings={() => { setPanel(null); openApp('settings'); }} />}
         <ToastViewport />
+        <PwaManager />
       </main>
     </LaunchProvider>
   );

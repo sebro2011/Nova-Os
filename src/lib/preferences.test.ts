@@ -21,6 +21,11 @@ describe('preference migration and validation', () => {
     expect(result.customWallpaperId).toBe('wallpaper-local-id');
   });
 
+  it('migrates and sanitizes recent apps without changing existing preferences', () => {
+    expect(sanitizePreferences({ theme: 'cosmic' }).recentApps).toEqual([]);
+    expect(sanitizePreferences({ recentApps: ['notes', 'notes', 'invalid', 'files'] }).recentApps).toEqual(['notes', 'files']);
+  });
+
   it('rejects invalid wallpaper names and oversized custom IDs', () => {
     const result = sanitizePreferences({ wallpaper: 'remote-url', customWallpaperId: 'x'.repeat(141) });
     expect(result.wallpaper).toBe('aurora');

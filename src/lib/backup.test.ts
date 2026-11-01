@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateBackup } from './backup';
+import { MAX_BACKUP_FILE_BYTES, serializeBackup, validateBackup } from './backup';
 import { defaultPreferences } from './preferences';
 import type { FileNode, NovaBackup } from '../types';
 
@@ -14,8 +14,9 @@ describe('backup validation', () => {
   it('accepts and reconstructs a valid backup', () => {
     const result = validateBackup(backup());
     expect(result.format).toBe('nova-web-os-backup');
-    expect(result.files).toHaveLength(1);
+    expect(result.files).toHaveLength(2);
     expect(result.files[0]).not.toBe(root);
+    expect(result.files[1]).toEqual(expect.objectContaining({ id: 'home', parentId: 'root', kind: 'folder' }));
   });
 
   it('rejects unsupported formats and missing roots', () => {
@@ -41,6 +42,15 @@ describe('backup validation', () => {
     expect(validateBackup(legacy).bookmarks).toEqual([]);
     const unsafe = { ...backup(), bookmarks: [{ id: 'bookmark', url: 'data:text/html,unsafe', title: 'Unsafe', createdAt: now }] };
     expect(() => validateBackup(unsafe)).toThrow('unsafe URL');
+  });
+
+  it('serializes backups with the same size contract used by import', () => {
+    const value = backup();
+    value.notes = Array.from({ length: 9 }, (_, index) => ({ id: `large-note-${index}`, title: 'Large', content: 'x'.repeat(1_000_000), createdAt: now, updatedAt: now }));
+    const serialized = serializeBackup(value);
+    expect(new TextEncoder().encode(serialized).byteLength).toBeGreaterThan(8 * 1024 * 1024);
+    expect(new TextEncoder().encode(serialized).byteLength).toBeLessThan(MAX_BACKUP_FILE_BYTES);
+    expect(validateBackup(JSON.parse(serialized)).notes[0].content).toHaveLength(1_000_000);
   });
 
   it('does not render or execute imported HTML-like text', () => {

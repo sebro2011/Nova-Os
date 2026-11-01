@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Bell, ChevronUp, Moon, Search, Sun, Wifi, WifiOff } from 'lucide-react';
 import { NovaLogo } from './NovaLogo';
 import { useNotifications } from '../context/NotificationContext';
@@ -21,19 +21,26 @@ export function Taskbar({ activeTitle, expandedPanel, onStart, onSearch, onNotif
   const { preferences, updatePreferences } = usePreferences();
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1_000);
+    let timer: number;
+    const update = () => {
+      setNow(new Date());
+      timer = window.setTimeout(update, 60_000 - (Date.now() % 60_000) + 50);
+    };
+    update();
     const updateOnline = () => setOnline(navigator.onLine);
     window.addEventListener('online', updateOnline);
     window.addEventListener('offline', updateOnline);
     return () => {
-      window.clearInterval(timer);
+      window.clearTimeout(timer);
       window.removeEventListener('online', updateOnline);
       window.removeEventListener('offline', updateOnline);
     };
   }, []);
 
-  const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', hour12: !preferences.clock24h }).format(now);
-  const date = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(now);
+  const timeFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', hour12: !preferences.clock24h }), [preferences.clock24h]);
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }), []);
+  const time = timeFormatter.format(now);
+  const date = dateFormatter.format(now);
 
   return (
     <header className="desktop-topbar relative z-[500] flex h-11 shrink-0 items-center gap-1 border-b px-2.5 sm:gap-2 sm:px-3">
@@ -42,15 +49,15 @@ export function Taskbar({ activeTitle, expandedPanel, onStart, onSearch, onNotif
         <span className="hidden text-xs font-semibold tracking-[0.15em] text-ink/90 sm:inline">NOVA</span>
       </button>
       <span className="hidden h-4 w-px bg-ink/10 sm:block" />
-      <p className="hidden min-w-0 flex-1 truncate px-1 text-[11px] text-ink/45 sm:block sm:flex-none">{activeTitle ?? 'Desktop'}</p>
+      <p className="hidden min-w-0 flex-1 truncate px-1 text-[11px] text-ink/65 sm:block sm:flex-none">{activeTitle ?? 'Desktop'}</p>
       <div className="hidden flex-1 items-center justify-center md:flex">
-        <button className="flex h-7 w-64 items-center gap-2 rounded-lg border border-ink/[0.07] bg-black/10 px-3 text-left text-[11px] text-ink/35 transition-colors hover:border-ink/15 hover:text-ink/60" onClick={onSearch}>
+        <button className="flex h-7 w-64 items-center gap-2 rounded-lg border border-ink/[0.07] bg-black/10 px-3 text-left text-[11px] text-muted transition-colors hover:border-ink/15 hover:text-ink/60" onClick={onSearch}>
           <Search size={12} /> Search your universe <kbd className="ml-auto rounded border border-ink/10 px-1 py-0.5 text-[9px]">Ctrl K</kbd>
         </button>
       </div>
       <nav className="ml-auto flex items-center gap-0.5" aria-label="System tray">
         <button className="icon-button md:hidden" onClick={onSearch} aria-label="Global search"><Search size={15} /></button>
-        <span className="mx-1 hidden items-center gap-1.5 text-[10px] text-ink/35 sm:flex" title={online ? 'Browser reports an internet connection' : 'Browser reports offline mode'}>
+        <span className="mx-1 hidden items-center gap-1.5 text-[10px] text-muted sm:flex" title={online ? 'Browser reports an internet connection' : 'Browser reports offline mode'}>
           {online ? <Wifi size={13} className="text-nova-cyan/70" /> : <WifiOff size={13} className="text-amber-300/70" />}
           <span className="hidden lg:inline">{online ? 'Online' : 'Offline'}</span>
         </span>
@@ -63,7 +70,7 @@ export function Taskbar({ activeTitle, expandedPanel, onStart, onSearch, onNotif
         </button>
         <button className="icon-button" onClick={onQuickSettings} aria-label="Quick settings" aria-expanded={expandedPanel === 'tray'}><ChevronUp size={15} /></button>
         <button className="ml-1 flex h-8 items-center gap-2 rounded-lg px-2 text-right transition-colors hover:bg-ink/[0.06]" onClick={onCalendar} aria-label={`Open Calendar. ${date}, ${time}`}>
-          <span className="hidden text-[10px] text-ink/40 sm:inline">{date}</span>
+          <span className="hidden text-[10px] text-muted sm:inline">{date}</span>
           <span className="min-w-[48px] text-[11px] font-medium tabular-nums text-ink/75">{time}</span>
         </button>
       </nav>

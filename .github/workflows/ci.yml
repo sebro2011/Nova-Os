@@ -29,3 +29,7 @@ jobs:
         run: npm test
       - name: Build production site
         run: npm run build
+      - name: Validate PWA artifacts and cache boundaries
+        run: npm run test:pwa
+      - name: Audit locked dependencies
+        run: npm audit --audit-level=high

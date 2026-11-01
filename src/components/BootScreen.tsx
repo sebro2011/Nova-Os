@@ -54,7 +54,7 @@ export function BootScreen({ onComplete, wallpaperUrl }: { onComplete: () => voi
             <NovaLogo size="xl" />
           </motion.div>
           <h1 className="mt-7 text-xl font-semibold tracking-[0.3em] text-ink">NOVA</h1>
-          <p className="mt-2 text-[10px] font-medium tracking-[0.22em] text-ink/40">BEYOND EARTH. BEYOND LIMITS.</p>
+          <p className="mt-2 text-[10px] font-medium tracking-[0.22em] text-muted">BEYOND EARTH. BEYOND LIMITS.</p>
           <div className="mt-9 h-0.5 w-48 overflow-hidden rounded-full bg-ink/10">
             <motion.div
               className="h-full rounded-full bg-gradient-to-r from-nova-cyan via-nova-blue to-nova-violet"
@@ -63,8 +63,8 @@ export function BootScreen({ onComplete, wallpaperUrl }: { onComplete: () => voi
               transition={{ duration: reducedMotion ? 0 : 1.15, ease: 'easeInOut' }}
             />
           </div>
-          <p className="mt-4 text-xs text-ink/45">Preparing your local universe…</p>
-          <button className="mt-8 text-xs text-ink/35 transition-colors hover:text-ink/70" onClick={onComplete}>Skip startup</button>
+          <p className="mt-4 text-xs text-ink/65">Preparing your local universe…</p>
+          <button className="mt-8 text-xs text-muted transition-colors hover:text-ink/70" onClick={onComplete}>Skip startup</button>
         </motion.section>
       ) : (
         <motion.section
@@ -93,12 +93,12 @@ export function BootScreen({ onComplete, wallpaperUrl }: { onComplete: () => voi
                 <div key={title} className="nova-card p-3.5">
                   <Icon size={17} className="accent-text" />
                   <p className="mt-3 text-xs font-semibold text-ink/85">{title}</p>
-                  <p className="mt-1 text-[11px] leading-4 text-ink/40">{text}</p>
+                  <p className="mt-1 text-[11px] leading-4 text-muted">{text}</p>
                 </div>
               ))}
             </div>
             <div className="mt-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-              <p className="text-[11px] text-ink/35">Modern browser · desktop and mobile</p>
+              <p className="text-[11px] text-muted">Modern browser · desktop and mobile</p>
               <button className="nova-button w-full sm:w-auto" onClick={enterDesktop} autoFocus>
                 Enter desktop <ArrowRight size={16} />
               </button>
