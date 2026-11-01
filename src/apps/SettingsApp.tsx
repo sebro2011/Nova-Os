@@ -6,6 +6,7 @@ import {
 import { useNotifications } from '../context/NotificationContext';
 import { useLauncher } from '../context/LaunchContext';
 import { usePreferences } from '../context/PreferencesContext';
+import { useI18n } from '../context/LocalizationContext';
 import { MAX_BACKUP_FILE_BYTES, serializeBackup, validateBackup } from '../lib/backup';
 import { getDatabaseSnapshot, initializeDatabase, replaceDatabaseSnapshot } from '../lib/db';
 import { WELCOME_KEY } from '../lib/preferences';
@@ -45,6 +46,7 @@ export default function SettingsApp() {
   const cursorInputRef = useRef<HTMLInputElement>(null);
   const [cursorBusy, setCursorBusy] = useState(false);
   const { preferences, updatePreferences, resetPreferences, storageError } = usePreferences();
+  const { t } = useI18n();
   const { notify } = useNotifications();
   const { consumeLaunchIntent } = useLauncher();
   const importDialogRef = useModalFocus<HTMLElement>(Boolean(pendingImport), () => setPendingImport(null));
@@ -174,6 +176,7 @@ export default function SettingsApp() {
           {tab === 'appearance' && <>
             <p className="eyebrow">PERSONALIZE YOUR ORBIT</p><h2 className="mt-1.5 text-xl font-semibold">Appearance</h2><p className="mt-1.5 text-[11px] text-muted">A few quiet adjustments. Saved automatically in LocalStorage.</p>
             <section className="mt-5"><h3 className="text-xs font-medium text-ink/60">Color mode</h3><div className="mt-2.5 grid grid-cols-2 gap-2">{(['dark', 'light'] as const).map((mode) => <button key={mode} className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-[11px] capitalize ${preferences.colorMode === mode ? 'border-[rgba(var(--accent-rgb),0.4)] bg-[rgba(var(--accent-rgb),0.09)] accent-text' : 'border-ink/[0.07] text-ink/65 hover:bg-ink/[0.03]'}`} onClick={() => updatePreferences({ colorMode: mode })} aria-pressed={preferences.colorMode === mode}>{mode === 'dark' ? <Moon size={15} /> : <Sun size={15} />}{mode} mode</button>)}</div></section>
+            <section className="mt-5"><SettingsCard title={t('settings.language')}><SelectRow title={t('settings.language')} description={t('settings.languageDescription')} value={preferences.language} options={[{ value: 'en', label: 'English' }, { value: 'si', label: 'සිංහල' }, { value: 'ta', label: 'தமிழ்' }]} onChange={(language) => updatePreferences({ language })} /></SettingsCard></section>
             <section className="mt-5"><h3 className="text-xs font-medium text-ink/60">Theme</h3><div className="mt-2.5 grid grid-cols-3 gap-2">{([
               ['cosmic', 'Cosmic', 'from-[#111a36] to-[#171229]'], ['midnight', 'Midnight', 'from-[#050810] to-[#0b1320]'], ['nebula', 'Nebula', 'from-[#211238] to-[#11132d]'],
             ] as const).map(([id, label, gradient]) => <button key={id} className={`rounded-xl border p-2 text-left transition-colors ${preferences.theme === id ? 'border-[rgba(var(--accent-rgb),0.45)] bg-[rgba(var(--accent-rgb),0.08)]' : 'border-ink/[0.07] hover:bg-ink/[0.03]'}`} onClick={() => updatePreferences({ theme: id })} aria-pressed={preferences.theme === id}><span className={`block h-14 rounded-lg bg-gradient-to-br ${gradient} shadow-inner`}><span className="m-2 block h-1.5 w-1.5 rounded-full bg-ink/60" /></span><span className="mt-2 flex items-center px-1 text-[10px] text-ink/65">{label}{preferences.theme === id && <Check size={11} className="accent-text ml-auto" />}</span></button>)}</div></section>

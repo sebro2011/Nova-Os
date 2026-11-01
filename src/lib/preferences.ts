@@ -15,6 +15,7 @@ export const defaultPreferences: NovaPreferences = {
   colorMode: 'dark',
   theme: 'cosmic',
   accent: 'blue',
+  language: 'en',
   wallpaper: 'aurora',
   customWallpaperId: null,
   startupAnimation: true,
@@ -75,6 +76,7 @@ export function sanitizePreferences(value: unknown): NovaPreferences {
     accent: ['blue', 'violet', 'cyan'].includes(String(value.accent))
       ? value.accent as NovaPreferences['accent']
       : defaultPreferences.accent,
+    language: enumValue(value.language, ['en', 'si', 'ta'] as const, defaultPreferences.language),
     wallpaper: ['aurora', 'orbit', 'starlight', 'custom'].includes(String(value.wallpaper))
       ? value.wallpaper as NovaPreferences['wallpaper']
       : defaultPreferences.wallpaper,
