@@ -30,6 +30,18 @@ describe('known frame embedding restrictions', () => {
     expect(getMixedContentRestriction('https://example.com', 'https:')).toBeNull();
   });
 
+  it('uses external navigation for GitHub and non-video YouTube pages', () => {
+    expect(getEmbeddingRestriction('https://github.com/sebro2011/Nova-Os')).toContain('GitHub');
+    expect(getEmbeddingRestriction('https://www.youtube.com/')).toContain('YouTube');
+    expect(getEmbeddingRestriction('https://studio.youtube.com/')).toContain('YouTube');
+    expect(getEmbeddingRestriction('https://www.youtube.com/watch?v=w2pSFFG0AzY')).toBeNull();
+  });
+
+  it('prevents recursive same-origin frames without blocking lookalike origins', () => {
+    expect(getEmbeddingRestriction('https://nova.example/window', 'https://nova.example')).toContain('own application origin');
+    expect(getEmbeddingRestriction('https://nova.example.evil.test/', 'https://nova.example')).toBeNull();
+  });
+
   it('does not classify other addresses as external-only', () => {
     expect(getEmbeddingRestriction('https://www.google.com/')).toBeNull();
     expect(getEmbeddingRestriction('https://maps.google.com/')).toBeNull();

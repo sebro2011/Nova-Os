@@ -16,7 +16,7 @@ A lightweight, responsive, local-first desktop environment that runs entirely in
 - Global search across apps, virtual files, notes, events, and settings (`Ctrl + K`), with direct record/section opening
 - Installable production app shell with manifest icons, offline static-asset caching, and a user-controlled update prompt
 - **Files:** virtual folders and plain-text files, rename, safe Trash/restore, permanent-delete confirmation, text import, and download
-- **NOVA Browser:** up to eight session tabs, persistent bookmarks, HTTP/HTTPS navigation, search, back/forward, clearable local history, sandboxed frames, an official privacy-enhanced YouTube player, and a dedicated external-only screen for Google Search
+- **NOVA Browser:** up to eight session tabs, persistent bookmarks, HTTP/HTTPS navigation, search, back/forward, stop/reload, clearable local history, supported fullscreen, sandboxed frames, an official privacy-enhanced YouTube player, offline/stopped pages, and honest external-only handling for known framing restrictions
 - **Terminal:** a restricted custom command interpreter—not a system shell
 - **Notes:** local notes with debounced autosave
 - **Calculator:** keyboard-friendly arithmetic using a dedicated parser, with no `eval`
@@ -74,6 +74,7 @@ The deployable static site is generated in `dist/`.
 
 ```text
 Nova-Os/
+├── docs/                   # Architecture and compatibility audits
 ├── public/
 │   ├── icons/                # PNG, maskable, and Apple touch icons
 │   ├── favicon.svg
@@ -107,6 +108,12 @@ Nova-Os/
 ├── vite.config.ts
 └── vercel.json
 ```
+
+## Browser compatibility
+
+NOVA Browser respects destination security policies rather than proxying around them. Its **Site compatibility & privacy** panel explains iframe restrictions, `X-Frame-Options`, CSP `frame-ancestors`, CORS, authentication, and browser API boundaries. Stop, offline, and known external-only pages preserve the current address and NOVA tab context. Fullscreen is attempted only through the supported browser API.
+
+The detailed audit, optional Chromium-desktop security evaluation, and site-check record are in [`docs/browser-architecture.md`](docs/browser-architecture.md). An Electron/desktop runtime is **not** part of the current application and would require a separate approved architecture and migration plan.
 
 ## Phone and touch use
 
@@ -196,7 +203,7 @@ For the target Windows 10 PC (Intel Core i5-3330, 8 GB RAM, GTX 960 2 GB), use a
 Executed for the current implementation:
 
 - `npm run typecheck` — passed
-- `npm test` — **19 test files, 55 tests passed** (including Notes autosave races, Files close guards, IndexedDB lifecycle, deep-link search, modal focus, Dock limits, Media object URLs, YouTube adaptation, responsive windows, and backup migration)
+- `npm test` — **19 test files, 61 tests passed** (including Browser stop/reload, external navigation, fullscreen/offline handling, embedding policies, Notes autosave races, Files close guards, IndexedDB lifecycle, deep-link search, modal focus, Dock limits, Media object URLs, YouTube adaptation, responsive windows, and backup migration)
 - `npm run build` — passed; static output generated successfully
 - `npm run test:pwa` — manifest, real PNG dimensions, maskable assets, worker boundaries, update-cache headers, and production artifacts validated
 - Production preview HTTP smoke — app, SPA fallback, manifest, worker, and icons returned 200; `node --check public/sw.js` passed
@@ -208,7 +215,7 @@ These results describe the checks actually run in the implementation environment
 ## Known limitations
 
 - Browser storage is origin-specific and can be cleared by site-data controls, private browsing behavior, browser policy, or storage pressure. Persistent-storage requests are browser-decided and do not replace backups.
-- NOVA Browser is an interface inside the host browser, not a separate engine, VPN, or proxy. Many websites refuse framed embedding through `X-Frame-Options` or CSP. Google Search uses a dedicated external-only screen instead of rendering its blocked frame; use **Open externally** to continue in a normal browser tab. Other sites may also require external opening.
+- NOVA Browser is an interface inside the host browser, not a separate engine, VPN, or proxy. Many websites refuse framed embedding through `X-Frame-Options` or CSP. Google Search, GitHub, and non-video YouTube pages use dedicated external-only screens instead of rendering their blocked frames; use **Open externally** to continue in a normal browser tab. Other sites may also require external opening. An iframe load event is not treated as proof that cross-origin content rendered successfully.
 - Supported YouTube watch, Shorts, live, and `youtu.be` links load through the official `youtube-nocookie.com` embed player. The original address remains in the address bar, local history/bookmarks, and **Open externally**. Individual videos may still disable embedding, require sign-in or age verification, or be unavailable in the current region.
 - Cross-origin browser rules prevent NOVA from reliably tracking navigation that occurs inside a framed site. Back/forward primarily covers addresses submitted through NOVA. Browser tabs are session-only and are not restored after a reload.
 - Custom wallpaper images are stored only in IndexedDB and are not included in JSON backups.
