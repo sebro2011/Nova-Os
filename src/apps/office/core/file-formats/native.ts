@@ -17,13 +17,15 @@ export function createOfficeData<K extends OfficeDocumentKind>(kind: K, template
   return createPresentationDocument(template === 'pitch' ? 'pitch' : 'blank') as OfficeDataMap[K];
 }
 
+export function validateOfficeData<K extends OfficeDocumentKind>(kind: K, data: unknown): OfficeDataMap[K] {
+  if (kind === 'writer') return validateWriterDocument(data) as OfficeDataMap[K];
+  if (kind === 'sheets') return validateWorkbookDocument(data) as OfficeDataMap[K];
+  return validatePresentationDocument(data) as OfficeDataMap[K];
+}
+
 export function serializeOfficeData<K extends OfficeDocumentKind>(kind: K, data: OfficeDataMap[K]): string {
-  const validated = kind === 'writer'
-    ? validateWriterDocument(data)
-    : kind === 'sheets'
-      ? validateWorkbookDocument(data)
-      : validatePresentationDocument(data);
-  const envelope: OfficeEnvelope<OfficeDataMap[K]> = { format: 'nova-office', version: 1, kind, data: validated as OfficeDataMap[K] };
+  const validated = validateOfficeData(kind, data);
+  const envelope: OfficeEnvelope<OfficeDataMap[K]> = { format: 'nova-office', version: 1, kind, data: validated };
   const serialized = JSON.stringify(envelope);
   if (serialized.length > MAX_NATIVE_OFFICE_CHARS) throw new Error('Native Office files are limited to 12 million characters. Reduce embedded images or split the document.');
   return serialized;

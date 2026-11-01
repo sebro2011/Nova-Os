@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type S
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, ChevronLeft, ChevronRight,
-  Columns3, Download, FilePlus2, FileUp, Image, Italic, Link2, List, ListOrdered,
+  Columns3, Download, FilePlus2, FileUp, History, Image, Italic, Link2, List, ListOrdered,
   Printer, Redo2, Rows3, Save, Search, Settings2, Strikethrough, Table, Trash2,
   Underline, Undo2, X,
 } from 'lucide-react';
@@ -17,6 +17,7 @@ import { downloadBlob, downloadText, readFileAsDataUrl } from '../services/downl
 import { errorMessage } from '../../../lib/utils';
 import { useI18n } from '../../../context/LocalizationContext';
 import { OfficeDialog, OfficeMenu, OfficeSaveIndicator, OfficeToolbarButton, OfficeWarnings } from '../components/OfficeUI';
+import OfficeRevisionDialog from '../components/OfficeRevisionDialog';
 import { writerExtensions } from './writer-schema';
 import { findWriterMatches, replaceWriterMatches, selectWriterMatch } from './writer-find';
 import { importDocx, importPlainText } from './writer-import';
@@ -28,7 +29,7 @@ interface WriterWorkspaceProps {
   error: string;
   updateData: (update: SetStateAction<WriterDocument>) => void;
   rename: (name: string) => void;
-  flush: () => Promise<void>;
+  flush: (forceRevision?: boolean) => Promise<void>;
   createNew: () => Promise<void>;
 }
 
@@ -48,6 +49,7 @@ export default function WriterWorkspace({ file, data, status, error, updateData,
   const [replacement, setReplacement] = useState('');
   const [matchIndex, setMatchIndex] = useState(0);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [revisionsOpen, setRevisionsOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('https://');
   const importRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLInputElement>(null);
@@ -181,7 +183,7 @@ export default function WriterWorkspace({ file, data, status, error, updateData,
     if (!(event.ctrlKey || event.metaKey)) return;
     if (event.key.toLowerCase() === 's') {
       event.preventDefault();
-      void flush();
+      void flush(true);
     } else if (event.key.toLowerCase() === 'f') {
       event.preventDefault();
       setFindOpen(true);
@@ -199,12 +201,13 @@ export default function WriterWorkspace({ file, data, status, error, updateData,
     <header className="office-app-header">
       <input className="office-title-input" aria-label={t('common.name')} value={title} maxLength={120} onChange={(event) => rename(event.target.value)} />
       <OfficeSaveIndicator status={status} />
-      <button type="button" className="office-primary-button" onClick={() => void flush()} disabled={busy}><Save size={14} />{t('common.save')}</button>
+      <button type="button" className="office-primary-button" onClick={() => void flush(true)} disabled={busy}><Save size={14} />{t('common.save')}</button>
     </header>
     <div className="office-toolbar" role="toolbar" aria-label={t('writer.tools')}>
       <OfficeMenu label={t('common.file')}>
         <button className="office-menu-item" onClick={() => void createNew()}><FilePlus2 size={14} />{t('office.newDocument')}</button>
         <button className="office-menu-item" onClick={() => importRef.current?.click()}><FileUp size={14} />{t('writer.importDocxText')}</button>
+        <button className="office-menu-item" onClick={() => setRevisionsOpen(true)}><History size={14} />{t('office.revisionHistory')}</button>
         <button className="office-menu-item" onClick={exportNative}><Download size={14} />{t('writer.exportNative')}</button>
         <button className="office-menu-item" onClick={() => void exportDocx()} disabled={busy}><Download size={14} />{t('writer.exportDocx')}</button>
         <button className="office-menu-item" onClick={() => void exportText()} disabled={busy}><Download size={14} />{t('writer.exportText')}</button>
@@ -282,6 +285,7 @@ export default function WriterWorkspace({ file, data, status, error, updateData,
     <footer className="office-statusbar"><span>{t('writer.words', { count: editorState?.words ?? 0 })}</span><span>{t('writer.characters', { count: editorState?.characters ?? 0 })}</span><span className="office-statusbar-right">{t('office.localOffline')}</span></footer>
     <input ref={importRef} type="file" className="hidden" accept=".docx,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" onChange={(event: ChangeEvent<HTMLInputElement>) => { importDocument(event.target.files?.[0]); event.target.value = ''; }} />
     <input ref={imageRef} type="file" className="hidden" accept="image/png,image/jpeg,image/webp" onChange={(event) => { insertImage(event.target.files?.[0]); event.target.value = ''; }} />
+    {revisionsOpen && <OfficeRevisionDialog fileId={file.id} kind="writer" onClose={() => setRevisionsOpen(false)} onRestore={(revision) => { const restored = validateWriterDocument(revision); dataRef.current = restored; updateData(restored); editor?.commands.setContent(restored.content, { emitUpdate: false }); }} />}
     {linkOpen && <OfficeDialog title={t('writer.link')} onClose={() => setLinkOpen(false)} footer={<><button className="office-secondary-button" onClick={() => setLinkOpen(false)}>{t('common.cancel')}</button><button className="office-primary-button" onClick={applyLink}>{t('common.save')}</button></>}><label className="office-field"><span>URL</span><input className="office-input" type="url" value={linkUrl} maxLength={2000} onChange={(event) => setLinkUrl(event.target.value)} placeholder="https://example.com" /></label><p className="office-panel-note">{t('writer.linkNote')}</p></OfficeDialog>}
   </div>;
 }

@@ -415,6 +415,13 @@
 .office-dialog-body { padding: 16px; }
 .office-dialog-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
 
+.office-revision-list { display: flex; flex-direction: column; gap: 6px; }
+.office-revision-list button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); background: rgb(var(--ink-rgb) / 0.035); text-align: left; }
+.office-revision-list button:hover { background: rgb(var(--ink-rgb) / 0.075); }
+.office-revision-list button > span { display: flex; flex: 1; flex-direction: column; gap: 3px; }
+.office-revision-list strong { font-size: 11px; font-weight: 600; }
+.office-revision-list small { color: var(--muted); font-size: 9px; }
+
 .office-centered-state {
   display: flex;
   align-items: center;

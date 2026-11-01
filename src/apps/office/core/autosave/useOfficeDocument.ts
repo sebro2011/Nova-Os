@@ -6,6 +6,7 @@ import type { AppId, FileNode } from '../../../../types';
 import type { OfficeDocumentKind, OfficeTemplate } from '../file-formats/constants';
 import type { OfficeDataMap } from '../file-formats/native';
 import { createOfficeFile, loadOfficeFile, saveOfficeFile } from '../../services/office-storage';
+import { recordOfficeRevision } from '../../services/office-revisions';
 
 export type OfficeSaveStatus = 'loading' | 'saved' | 'dirty' | 'saving' | 'error';
 
@@ -40,7 +41,7 @@ export function useOfficeDocument<K extends OfficeDocumentKind>(kind: K) {
     updatePreferences({ recentOfficeFiles: [id, ...preferencesRef.current.recentOfficeFiles.filter((item) => item !== id)].slice(0, 50) });
   }, [updatePreferences]);
 
-  const flush = useCallback(async (): Promise<void> => {
+  const flush = useCallback(async (forceRevision = false): Promise<void> => {
     window.clearTimeout(timerRef.current);
     const currentFile = fileRef.current;
     const currentData = dataRef.current;
@@ -51,6 +52,7 @@ export function useOfficeDocument<K extends OfficeDocumentKind>(kind: K) {
       if (mountedRef.current) setStatus('saving');
       try {
         const updated = await saveOfficeFile(currentFile, kind, currentData, name);
+        await recordOfficeRevision(updated.id, kind, currentData, forceRevision).catch(() => false);
         persistedNameRef.current = updated.name;
         const hasNewerEdits = version !== editVersionRef.current;
         const latestName = fileRef.current?.id === currentFile.id ? fileRef.current.name : updated.name;

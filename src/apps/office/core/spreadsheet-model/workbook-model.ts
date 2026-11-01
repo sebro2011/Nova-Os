@@ -2,7 +2,8 @@ import { createId } from '../../../../lib/utils';
 import { cellAddressToCoords } from './cell-address';
 import { officeArray, officeColor, officeId, officeNumber, officeRecord, officeText } from '../file-formats/validation';
 
-export type NumberFormat = 'general' | 'number' | 'currency' | 'percent';
+export type NumberFormat = 'general' | 'number' | 'currency' | 'percent' | 'date' | 'text';
+export type CurrencyCode = 'LKR' | 'USD' | 'EUR' | 'GBP' | 'INR';
 export interface CellFormat {
   bold?: boolean;
   italic?: boolean;
@@ -11,11 +12,20 @@ export interface CellFormat {
   color?: string;
   border?: boolean;
   numberFormat?: NumberFormat;
+  currencyCode?: CurrencyCode;
 }
 
 export interface SheetCell {
   value: string;
   format?: CellFormat;
+}
+
+export interface SheetChart {
+  id: string;
+  type: 'bar' | 'line' | 'pie';
+  title: string;
+  startCell: string;
+  endCell: string;
 }
 
 export interface WorkbookSheet {
@@ -25,6 +35,9 @@ export interface WorkbookSheet {
   columnCount: number;
   cells: Record<string, SheetCell>;
   filter: string;
+  columnWidths: Record<string, number>;
+  rowHeights: Record<string, number>;
+  charts: SheetChart[];
 }
 
 export interface WorkbookDocument {
@@ -32,7 +45,8 @@ export interface WorkbookDocument {
   activeSheetId: string;
 }
 
-const numberFormats = new Set<NumberFormat>(['general', 'number', 'currency', 'percent']);
+const numberFormats = new Set<NumberFormat>(['general', 'number', 'currency', 'percent', 'date', 'text']);
+const currencyCodes = new Set<CurrencyCode>(['LKR', 'USD', 'EUR', 'GBP', 'INR']);
 const alignments = new Set(['left', 'center', 'right']);
 
 function validateCellFormat(value: unknown): CellFormat | undefined {
@@ -52,7 +66,54 @@ function validateCellFormat(value: unknown): CellFormat | undefined {
     if (typeof input.numberFormat !== 'string' || !numberFormats.has(input.numberFormat as NumberFormat)) throw new Error('Invalid number format.');
     output.numberFormat = input.numberFormat as NumberFormat;
   }
+  if (input.currencyCode !== undefined) {
+    if (typeof input.currencyCode !== 'string' || !currencyCodes.has(input.currencyCode as CurrencyCode)) throw new Error('Invalid currency code.');
+    output.currencyCode = input.currencyCode as CurrencyCode;
+  }
   return output;
+}
+
+function validateColumnWidths(value: unknown, columnCount: number): Record<string, number> {
+  const entries = Object.entries(officeRecord(value ?? {}, 'Column widths'));
+  if (entries.length > 52) throw new Error('Too many custom column widths.');
+  const output: Record<string, number> = {};
+  for (const [column, width] of entries) {
+    if (!/^[A-Z]{1,2}$/.test(column) || cellAddressToCoords(`${column}1`).column > columnCount) throw new Error('Invalid custom column width.');
+    const value = officeNumber(width, 'Column width', 40, 320);
+    if (!Number.isInteger(value)) throw new Error('Column widths must be whole pixels.');
+    output[column] = value;
+  }
+  return output;
+}
+
+function validateRowHeights(value: unknown, rowCount: number): Record<string, number> {
+  const entries = Object.entries(officeRecord(value ?? {}, 'Row heights'));
+  if (entries.length > 500) throw new Error('Too many custom row heights.');
+  const output: Record<string, number> = {};
+  for (const [row, height] of entries) {
+    if (!/^[1-9]\d{0,2}$/.test(row) || Number(row) > rowCount) throw new Error('Invalid custom row height.');
+    const value = officeNumber(height, 'Row height', 20, 160);
+    if (!Number.isInteger(value)) throw new Error('Row heights must be whole pixels.');
+    output[row] = value;
+  }
+  return output;
+}
+
+function validateCharts(value: unknown, rowCount: number, columnCount: number): SheetChart[] {
+  return officeArray(value ?? [], 'Sheet charts', 10).map((item): SheetChart => {
+    const chart = officeRecord(item, 'Chart');
+    const type = officeText(chart.type, 'Chart type', 10, false);
+    if (!['bar', 'line', 'pie'].includes(type)) throw new Error('Unsupported chart type.');
+    const startCell = officeText(chart.startCell, 'Chart start cell', 7, false).toUpperCase();
+    const endCell = officeText(chart.endCell, 'Chart end cell', 7, false).toUpperCase();
+    const start = cellAddressToCoords(startCell);
+    const end = cellAddressToCoords(endCell);
+    if (start.row > rowCount || end.row > rowCount || start.column > columnCount || end.column > columnCount) throw new Error('Chart range is outside the sheet.');
+    const rows = Math.abs(start.row - end.row) + 1;
+    const columns = Math.abs(start.column - end.column) + 1;
+    if (rows * columns > 200) throw new Error('Chart ranges are limited to 200 cells.');
+    return { id: officeId(chart.id, 'Chart ID'), type: type as SheetChart['type'], title: officeText(chart.title, 'Chart title', 120), startCell, endCell };
+  });
 }
 
 export function validateWorkbookDocument(value: unknown): WorkbookDocument {
@@ -86,7 +147,13 @@ export function validateWorkbookDocument(value: unknown): WorkbookDocument {
       const format = validateCellFormat(cell.format);
       cells[address] = { value: cellText, ...(format ? { format } : {}) };
     }
-    return { id, name, rowCount, columnCount, cells, filter: officeText(sheet.filter ?? '', 'Sheet filter', 200) };
+    return {
+      id, name, rowCount, columnCount, cells,
+      filter: officeText(sheet.filter ?? '', 'Sheet filter', 200),
+      columnWidths: validateColumnWidths(sheet.columnWidths, columnCount),
+      rowHeights: validateRowHeights(sheet.rowHeights, rowCount),
+      charts: validateCharts(sheet.charts, rowCount, columnCount),
+    };
   });
   if (!sheets.length) throw new Error('A workbook must contain at least one sheet.');
   const activeSheetId = officeId(input.activeSheetId, 'Active sheet ID');
@@ -95,7 +162,7 @@ export function validateWorkbookDocument(value: unknown): WorkbookDocument {
 }
 
 export function createWorkbookSheet(name = 'Sheet 1'): WorkbookSheet {
-  return { id: createId('sheet'), name, rowCount: 200, columnCount: 26, cells: {}, filter: '' };
+  return { id: createId('sheet'), name, rowCount: 200, columnCount: 26, cells: {}, filter: '', columnWidths: {}, rowHeights: {}, charts: [] };
 }
 
 export function createWorkbookDocument(template: 'blank' | 'budget' = 'blank'): WorkbookDocument {
