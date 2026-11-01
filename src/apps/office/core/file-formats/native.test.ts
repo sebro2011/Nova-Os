@@ -4,7 +4,7 @@ import { createWriterDocument } from '../document-model/writer-model';
 import { createWorkbookDocument } from '../spreadsheet-model/workbook-model';
 import { createPresentationDocument } from '../presentation-model/presentation-model';
 
- describe('native NOVA Office formats', () => {
+describe('native NOVA Office formats', () => {
   it('round-trips Writer, Sheets, and Slides version 1 models', () => {
     const writer = createWriterDocument('meeting');
     const workbook = createWorkbookDocument('budget');
@@ -17,12 +17,13 @@ import { createPresentationDocument } from '../presentation-model/presentation-m
   it('rejects active links, unsupported nodes, and remote images', () => {
     const writer = createWriterDocument();
     writer.content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'unsafe', marks: [{ type: 'link', attrs: { href: 'javascript:alert(1)' } }] }] }] };
-    expect(() => serializeOfficeData('writer', writer)).not.toThrow();
-    expect(() => parseOfficeData('writer', serializeOfficeData('writer', writer))).toThrow('Links allow only safe');
+    const unsafeEnvelope = () => JSON.stringify({ format: 'nova-office', version: 1, kind: 'writer', data: writer });
+    expect(() => serializeOfficeData('writer', writer)).toThrow('Links allow only safe');
+    expect(() => parseOfficeData('writer', unsafeEnvelope())).toThrow('Links allow only safe');
     writer.content = { type: 'doc', content: [{ type: 'script', attrs: {}, content: [] }] };
-    expect(() => parseOfficeData('writer', serializeOfficeData('writer', writer))).toThrow('Unsupported Writer node');
+    expect(() => parseOfficeData('writer', unsafeEnvelope())).toThrow('Unsupported Writer node');
     writer.content = { type: 'doc', content: [{ type: 'image', attrs: { src: 'https://tracker.example/pixel' } }] };
-    expect(() => parseOfficeData('writer', serializeOfficeData('writer', writer))).toThrow('raster data URL');
+    expect(() => parseOfficeData('writer', unsafeEnvelope())).toThrow('raster data URL');
   });
 
   it('rejects out-of-range cells and slide objects', () => {

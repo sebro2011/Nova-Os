@@ -6,7 +6,7 @@ export const WELCOME_KEY = 'nova.welcomed.v1';
 
 const appIds: AppId[] = [
   'files', 'browser', 'terminal', 'settings', 'notes', 'calculator',
-  'calendar', 'media', 'app-center', 'task-manager', 'help',
+  'calendar', 'media', 'app-center', 'task-manager', 'help', 'writer',
 ];
 
 const protectedAppIds = new Set<AppId>(['settings', 'app-center', 'browser', 'task-manager']);

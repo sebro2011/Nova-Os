@@ -35,7 +35,7 @@ This preserves Files rename/copy/Trash behavior, backup compatibility, global se
 | Tiptap 3.32.2 | MIT | React 18-compatible structured Writer editor; lazy app chunk. |
 | Mammoth 1.13.0 | BSD-2-Clause | DOCX-to-intermediate content; schema filtering before editor use; dynamic import. |
 | docx 9.15.1 | MIT | DOCX generation from the structured Writer model; dynamic import. |
-| fflate 0.8.3 | MIT | Bounded XLSX OOXML ZIP processing without ExcelJS legacy dependencies. |
+| fflate 0.8.3 | MIT | Bounded streaming DOCX/XLSX OOXML ZIP processing without ExcelJS legacy dependencies. |
 | PptxGenJS 4.0.1 | MIT | PPTX generation from the internal slide model; dynamic import. |
 | PDF.js 6.4.299 | Apache-2.0 | Local PDF parsing/rendering; lazy viewer and same-origin worker. |
 | jsPDF 4.2.1 + html2canvas 1.4.1 | MIT | Lazy visual PDF export; browser print remains available. |
@@ -68,3 +68,14 @@ The initial candidate tree reported 11 vulnerabilities. ExcelJS was removed, ffl
 - PDF export is visual/raster-based and is not a claim of accessible tagged-PDF generation.
 - Spreadsheet formulas are limited to the documented parser and requested functions.
 - Offline editing requires the relevant app/converter chunks to have been loaded once; private records remain in IndexedDB.
+
+## Writer-phase implementation evidence
+
+- A shared preference-backed English/Sinhala/Tamil provider now supplies typed messages, date/number formatting, document language metadata, and a Settings selector. It is shared NOVA infrastructure, not an Office-only locale store.
+- Writer is a real lazy registry app. Files opens native Writer records through `recordId` launch intents and refreshes after Office file events. Repeated automatic untitled names receive numeric suffixes; explicit naming conflicts remain errors.
+- The editor includes rich text, fonts/colors/sizes, headings, alignment, lists, links, validated local images, tables, undo/redo, find/replace, word/character counts, page size/margins, headers/footers, page-number settings, native/TXT/DOCX export, bounded raster PDF export, and sandboxed print.
+- Native serialization now validates before save/export. PNG/JPEG/WebP checks include actual signatures and bounded dimensions/pixel counts. OOXML extraction registers a streaming DEFLATE decoder, selects only required entries, and enforces declared and actual decompressed budgets.
+- DOCX import exposes a read-only verified ZIP adapter to Mammoth, disables external file access, sanitizes intermediate HTML, preserves readable text where formatting is unsupported, and surfaces compatibility warnings.
+- Executed DOCX evidence: generated a package containing formatted Unicode text, lists, a table, a link, and a local PNG; inspected its XML, external relationship, image payload, and PAGE field; then re-imported it through Mammoth and verified supported content. This passed.
+- Executed Writer-phase verification: TypeScript passed; 34 test files / 111 tests passed; production build passed; PWA validation passed; `git diff --check` passed. Vite reported large lazy Writer and PDF chunks, which remain separate from initial desktop startup.
+- Not yet executed: real-browser visual layout, canvas PDF rendering, print-dialog, screen-reader, mobile-device, or manual Microsoft Word/LibreOffice QA. PDF export and print are implemented but are not claimed as visually verified by jsdom tests.

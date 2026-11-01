@@ -1,4 +1,5 @@
 import { MAX_OFFICE_IMAGE_CHARS } from './constants';
+import { readRasterInfo } from './raster';
 
 export function officeRecord(value: unknown, label: string): Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error(`${label} must be an object.`);
@@ -33,6 +34,7 @@ export function officeImage(value: unknown, label = 'Image'): string {
   if (!/^data:image\/(?:png|jpeg|webp);base64,[a-z\d+/]+={0,2}$/i.test(image)) {
     throw new Error(`${label} must be a bounded PNG, JPEG, or WebP raster data URL.`);
   }
+  readRasterInfo(image);
   return image;
 }
 

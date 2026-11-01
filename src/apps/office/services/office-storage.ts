@@ -42,12 +42,23 @@ async function defaultParentId(): Promise<string> {
   return 'root';
 }
 
-export async function createOfficeFile<K extends OfficeDocumentKind>(kind: K, name: string, template: OfficeTemplate = 'blank', parentId?: string): Promise<{ file: FileNode; data: OfficeDataMap[K] }> {
+export async function createOfficeFile<K extends OfficeDocumentKind>(kind: K, name: string, template: OfficeTemplate = 'blank', parentId?: string, autoRename = false): Promise<{ file: FileNode; data: OfficeDataMap[K] }> {
   await initializeDatabase();
   const data = createOfficeData(kind, template);
   const parent = parentId ?? await defaultParentId();
-  const fileName = withOfficeExtension(name, kind);
-  await assertUniqueName(fileName, parent);
+  let fileName = withOfficeExtension(name, kind);
+  if (autoRename) {
+    const siblings = await getAllRecords<FileNode>('files');
+    const names = new Set(siblings.filter((file) => !file.trashed && file.parentId === parent).map((file) => file.name.toLowerCase()));
+    const extension = OFFICE_EXTENSION[kind];
+    const base = fileName.slice(0, -extension.length);
+    let suffix = 2;
+    while (names.has(fileName.toLowerCase()) && suffix < 10_000) {
+      fileName = `${base} ${suffix}${extension}`;
+      suffix += 1;
+    }
+    if (names.has(fileName.toLowerCase())) throw new Error('Too many documents use this name. Choose a different name.');
+  } else await assertUniqueName(fileName, parent);
   const now = new Date().toISOString();
   const file: FileNode = {
     id: createId('office'), parentId: parent, name: fileName, kind: 'file',
@@ -68,7 +79,7 @@ export async function loadOfficeFile<K extends OfficeDocumentKind>(id: string, k
 
 export async function saveOfficeFile<K extends OfficeDocumentKind>(file: FileNode, kind: K, data: OfficeDataMap[K], name?: string): Promise<FileNode> {
   if (file.trashed) throw new Error('Restore this file from Trash before saving changes.');
-  const nextName = name === undefined ? file.name : withOfficeExtension(name, kind);
+  const nextName = withOfficeExtension(name === undefined ? file.name : name, kind);
   if (nextName !== file.name) await assertUniqueName(nextName, file.parentId ?? await defaultParentId(), file.id);
   const updated: FileNode = { ...file, name: nextName, content: serializeOfficeData(kind, data), updatedAt: new Date().toISOString() };
   await putRecord('files', updated);

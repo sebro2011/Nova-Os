@@ -136,7 +136,7 @@ export function useOfficeDocument<K extends OfficeDocumentKind>(kind: K) {
     setStatus('loading');
     setError('');
     try {
-      const result = await createOfficeFile(kind, name ?? defaultNames[kind], template);
+      const result = await createOfficeFile(kind, name ?? defaultNames[kind], template, undefined, !name);
       if (!mountedRef.current || operation !== operationRef.current) return;
       fileRef.current = result.file;
       dataRef.current = result.data;

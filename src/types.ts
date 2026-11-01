@@ -9,7 +9,8 @@ export type AppId =
   | 'media'
   | 'app-center'
   | 'task-manager'
-  | 'help';
+  | 'help'
+  | 'writer';
 
 export type ThemeName = 'cosmic' | 'midnight' | 'nebula';
 export type AccentName = 'blue' | 'violet' | 'cyan';

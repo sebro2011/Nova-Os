@@ -18,7 +18,12 @@ export function createOfficeData<K extends OfficeDocumentKind>(kind: K, template
 }
 
 export function serializeOfficeData<K extends OfficeDocumentKind>(kind: K, data: OfficeDataMap[K]): string {
-  const envelope: OfficeEnvelope<OfficeDataMap[K]> = { format: 'nova-office', version: 1, kind, data };
+  const validated = kind === 'writer'
+    ? validateWriterDocument(data)
+    : kind === 'sheets'
+      ? validateWorkbookDocument(data)
+      : validatePresentationDocument(data);
+  const envelope: OfficeEnvelope<OfficeDataMap[K]> = { format: 'nova-office', version: 1, kind, data: validated as OfficeDataMap[K] };
   const serialized = JSON.stringify(envelope);
   if (serialized.length > MAX_NATIVE_OFFICE_CHARS) throw new Error('Native Office files are limited to 12 million characters. Reduce embedded images or split the document.');
   return serialized;

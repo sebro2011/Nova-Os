@@ -24,6 +24,15 @@ describe('Office canonical file storage', () => {
     await expect(createOfficeFile('writer', 'Roadmap')).rejects.toThrow('already exists');
   });
 
+  it('automatically suffixes repeated untitled documents without overwriting either record', async () => {
+    const first = await createOfficeFile('writer', 'Untitled document', 'blank', undefined, true);
+    const second = await createOfficeFile('writer', 'Untitled document', 'blank', undefined, true);
+    expect(first.file.name).toBe('Untitled document.nwdoc');
+    expect(second.file.name).toBe('Untitled document 2.nwdoc');
+    expect(second.file.id).not.toBe(first.file.id);
+    expect(await listOfficeFiles()).toHaveLength(2);
+  });
+
   it('stores PDF data locally and verifies its signature during round trips', async () => {
     const bytes = new TextEncoder().encode('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF');
     const file = await createPdfFile('Local report', bytes);
