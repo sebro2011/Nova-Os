@@ -108,7 +108,7 @@ export function WallpaperPicker() {
       </div>
       <div className="mt-2.5 grid grid-cols-3 gap-2">
         {(['aurora', 'orbit', 'starlight'] as const).map((wallpaper) => (
-          <button key={wallpaper} className={`rounded-xl border px-3 py-3 text-[10px] capitalize ${preferences.wallpaper === wallpaper ? 'border-[rgba(var(--accent-rgb),0.35)] accent-text bg-[rgba(var(--accent-rgb),0.07)]' : 'border-ink/[0.06] text-muted'}`} onClick={() => updatePreferences({ wallpaper })} aria-pressed={preferences.wallpaper === wallpaper}>{wallpaper}</button>
+          <button key={wallpaper} className={`rounded-xl border p-2 text-left text-[10px] capitalize ${preferences.wallpaper === wallpaper ? 'border-[rgba(var(--accent-rgb),0.35)] accent-text bg-[rgba(var(--accent-rgb),0.07)]' : 'border-ink/[0.06] text-muted'}`} onClick={() => updatePreferences({ wallpaper })} aria-pressed={preferences.wallpaper === wallpaper}><span className={`wallpaper-preview wallpaper-preview-${wallpaper}`} aria-hidden="true" /><span className="mt-2 flex items-center justify-between px-1">{wallpaper}{preferences.wallpaper === wallpaper && <Check size={11} />}</span></button>
         ))}
       </div>
       {wallpapers.length > 0 && <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">{wallpapers.map((wallpaper) => (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { Bell, ChevronUp, Moon, Search, Sun, Wifi, WifiOff } from 'lucide-react';
 import { NovaLogo } from './NovaLogo';
 import { useNotifications } from '../context/NotificationContext';
@@ -12,9 +12,10 @@ interface TaskbarProps {
   onNotifications: () => void;
   onQuickSettings: () => void;
   onCalendar: () => void;
+  onOpenMenu: (x: number, y: number) => void;
 }
 
-export function Taskbar({ activeTitle, expandedPanel, onStart, onSearch, onNotifications, onQuickSettings, onCalendar }: TaskbarProps) {
+export function Taskbar({ activeTitle, expandedPanel, onStart, onSearch, onNotifications, onQuickSettings, onCalendar, onOpenMenu }: TaskbarProps) {
   const [now, setNow] = useState(new Date());
   const [online, setOnline] = useState(navigator.onLine);
   const { unreadCount } = useNotifications();
@@ -41,9 +42,15 @@ export function Taskbar({ activeTitle, expandedPanel, onStart, onSearch, onNotif
   const dateFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }), []);
   const time = timeFormatter.format(now);
   const date = dateFormatter.format(now);
+  const openMenuFromKeyboard = (event: KeyboardEvent<HTMLElement>) => {
+    if (!((event.key === 'F10' && event.shiftKey) || event.key === 'ContextMenu')) return;
+    event.preventDefault();
+    const rect = event.currentTarget.getBoundingClientRect();
+    onOpenMenu(rect.left + 16, rect.top + 16);
+  };
 
   return (
-    <header className="desktop-topbar relative z-[500] flex h-11 shrink-0 items-center gap-1 border-b px-2.5 sm:gap-2 sm:px-3">
+    <header className="desktop-topbar relative z-[500] flex h-11 shrink-0 items-center gap-1 border-b px-2.5 sm:gap-2 sm:px-3" onContextMenu={(event) => { event.preventDefault(); onOpenMenu(event.clientX, event.clientY); }} onKeyDown={openMenuFromKeyboard}>
       <button className="taskbar-launcher flex h-8 items-center gap-2 rounded-lg px-1.5 pr-2.5 transition-colors hover:bg-ink/[0.06]" onClick={onStart} aria-label="Open NOVA launcher" aria-expanded={expandedPanel === 'start'}>
         <NovaLogo size="sm" />
         <span className="hidden text-xs font-semibold tracking-[0.15em] text-ink/90 sm:inline">NOVA</span>
@@ -69,10 +76,10 @@ export function Taskbar({ activeTitle, expandedPanel, onStart, onSearch, onNotif
           {preferences.colorMode === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
         </button>
         <button className="icon-button" onClick={onQuickSettings} aria-label="Quick settings" aria-expanded={expandedPanel === 'tray'}><ChevronUp size={15} /></button>
-        <button className="ml-1 flex h-8 items-center gap-2 rounded-lg px-2 text-right transition-colors hover:bg-ink/[0.06]" onClick={onCalendar} aria-label={`Open Calendar. ${date}, ${time}`}>
+        {preferences.showClock && <button className="ml-1 flex h-8 items-center gap-2 rounded-lg px-2 text-right transition-colors hover:bg-ink/[0.06]" onClick={onCalendar} aria-label={`Open Calendar. ${date}, ${time}`}>
           <span className="hidden text-[10px] text-muted sm:inline">{date}</span>
           <span className="min-w-[48px] text-[11px] font-medium tabular-nums text-ink/75">{time}</span>
-        </button>
+        </button>}
       </nav>
     </header>
   );

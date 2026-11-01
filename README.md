@@ -8,12 +8,12 @@ A lightweight, responsive, local-first desktop environment that runs entirely in
 
 ## Features
 
-- Animated boot and first-run welcome experience
-- Cosmic Dark and bright light modes with Liquid Glass-inspired surfaces, three themes, three accents, three built-in wallpapers, and custom image uploads
-- Desktop icons, app launcher, dock, taskbar, system tray, clock, quick settings, and notification center
-- Multi-window manager with focus, drag, eight-direction resize, minimize, maximize/restore, and close
+- Fast animated boot and first-run welcome with optional sound/animation controls and reduced-motion support
+- Cosmic Dark and bright light modes with Liquid Glass-inspired surfaces, three themes, three accents, built-in/custom wallpapers with previews, adjustable window materials/radius, and system/NOVA/custom raster cursors
+- Desktop icons, validated website shortcuts, app launcher, dock, taskbar, system tray, optional clock, quick settings, notification center, and supported desktop/taskbar context menus
+- Multi-window manager with focus, drag, eight-direction resize, reversible left/right snapping, state-preserving minimize, maximize/restore, and close
 - **Mobile phone layout:** edge-to-edge app windows, portrait/landscape adaptation, safe-area support, larger touch controls, mobile browser menus, and touch-friendly Files navigation
-- Global search across apps, virtual files, notes, events, and settings (`Ctrl + K`), with direct record/section opening
+- Global search across apps, website shortcuts, virtual files, notes, events, and settings (`Ctrl + K`), with direct record/section/URL opening
 - Installable production app shell with manifest icons, offline static-asset caching, and a user-controlled update prompt
 - **Files:** virtual folders and plain-text files, rename, safe Trash/restore, permanent-delete confirmation, text import, and download
 - **NOVA Browser:** up to eight session tabs, persistent bookmarks, HTTP/HTTPS navigation, search, back/forward, stop/reload, clearable local history, supported fullscreen, sandboxed frames, an official privacy-enhanced YouTube player, offline/stopped pages, and honest external-only handling for known framing restrictions
@@ -22,9 +22,10 @@ A lightweight, responsive, local-first desktop environment that runs entirely in
 - **Calculator:** keyboard-friendly arithmetic using a dedicated parser, with no `eval`
 - **Calendar:** six-week month view and local event management
 - **Media Player:** local audio/video playback with a session-only queue
-- **App Center:** launch and pin built-in apps; no executable installation
-- **Settings:** light/dark mode, themes, custom locally stored wallpapers, accessibility, performance mode, browser storage estimates, and data controls
-- Validated JSON backup import with preview/confirmation and full JSON export
+- **App Center:** Discover, NOVA Apps, Installed, Library, and Add Website sections; non-destructive built-in removal/restore, dock pins, search/categories/status, and validated website name/URL/icon/desktop management without executable installation
+- **Task Manager:** real running/active/minimized NOVA windows with focus, restore, minimize, and guarded close actions; no fabricated CPU/RAM/GPU telemetry
+- **Settings:** startup, light/dark mode, themes, custom locally stored wallpapers, window glass/transparency/radius, desktop labels/icons/layout, taskbar clock/size/material/position, cursors, high contrast, reduced motion, compact controls, opaque performance mode, browser storage estimates, and data controls
+- Validated JSON backup import with preview/confirmation and full JSON export, including optional version 1 website shortcuts
 - Keyboard shortcuts, Help Center, responsive layouts, reduced-motion support, and storage error states
 
 ## Tech stack
@@ -91,9 +92,10 @@ Nova-Os/
 │   │   ├── MediaApp.tsx
 │   │   ├── SettingsApp.tsx
 │   │   ├── AppCenterApp.tsx
+│   │   ├── TaskManagerApp.tsx
 │   │   └── HelpApp.tsx
 │   ├── components/           # Boot screen, shell, windows, dock, menus, search
-│   ├── context/              # Preferences, notifications, app launching
+│   ├── context/              # Preferences, notifications, launching, window controls
 │   ├── hooks/                # Window-manager state and viewport fitting
 │   ├── lib/                  # IndexedDB, validation, parsers, utilities, tests
 │   ├── test/                 # Vitest setup
@@ -132,6 +134,8 @@ Mobile browser chrome and virtual keyboards still reduce the available workspace
 | --- | --- |
 | `Ctrl + K` | Toggle global search |
 | `Ctrl + Alt + T` | Open restricted Terminal |
+| `Ctrl + Shift + Escape` | Open Task Manager |
+| `Shift + F10` / Context Menu key | Open supported actions from the desktop workspace or taskbar controls |
 | `Alt + M` | Minimize active window |
 | `Alt + W` | Close active window |
 | `Alt + Arrow keys` | Move a focused desktop window |
@@ -141,7 +145,9 @@ Mobile browser chrome and virtual keyboards still reduce the available workspace
 | `Escape` | Close menus and overlays |
 | `Enter` | Open a focused desktop item or search result |
 
-The browser or Windows may reserve some key combinations. Calculator also accepts numbers, arithmetic operators, Enter, Backspace, and Escape while focused.
+The browser or Windows may reserve some key combinations. Calculator also accepts numbers, arithmetic operators, Enter, Backspace, and Escape while focused. Global search supports Arrow keys plus Home/End and keeps the active result visible.
+
+On desktop-sized screens, the title-bar snap control tiles a window to either half of the workspace. Choosing the active side again—or choosing **Restore floating layout**—restores its prior geometry; manually moving or resizing returns it to floating mode. Snapping is hidden for edge-to-edge phone windows.
 
 ## Data model and backups
 
@@ -152,12 +158,13 @@ IndexedDB contains these object stores:
 - `events`: local calendar events
 - `history`: addresses explicitly submitted in NOVA Browser
 - `bookmarks`: persistent NOVA Browser bookmarks
+- `websites`: validated website names, HTTP/HTTPS URLs, optional raster icons, and desktop visibility
 - `wallpapers`: user-uploaded PNG, JPEG, and WebP image blobs
 - `meta`: database initialization metadata
 
 Preferences are stored separately in LocalStorage. Media Player uses temporary object URLs; its queue is **not persisted**. Browser history is pruned to the newest 450 entries when it grows beyond 500, and can also be cleared explicitly.
 
-Use **Settings → Data → Export backup** regularly. Backups are unencrypted JSON and may contain personal notes, events, file contents, browsing addresses, and bookmarks. Export and import share a 64 MB safety limit. Import validates the complete schema and relationships, migrates legacy root-only backups by adding Home, reconstructs plain objects, shows a preview, and requires confirmation before replacing current data. Custom wallpaper image blobs are **not** included in JSON backups and remain on the current browser origin.
+Use **Settings → Data → Export backup** regularly. Backups are unencrypted JSON and may contain personal notes, events, file contents, browsing addresses, bookmarks, and website shortcuts/icons. Export and import share a 64 MB safety limit. Import validates the complete schema and relationships, migrates legacy root-only backups by adding Home, reconstructs plain objects, shows a preview, and requires confirmation before replacing covered data. Website shortcuts are an optional version 1 field: older backups without it preserve current shortcuts, while newer backups explicitly replace them. Custom wallpaper image blobs are **not** included in JSON backups and remain on the current browser origin.
 
 ## Installability and offline behavior
 
@@ -179,8 +186,9 @@ The production build includes a web app manifest, 192/512 px PNG icons, a maskab
 - Backup imports validate types, lengths, IDs, dates, URLs, folder relationships, and collection limits
 - Virtual Files cannot browse or modify the Windows file system; users must explicitly choose local text/media/wallpaper files
 - Wallpaper uploads accept only decodable PNG, JPEG, or WebP images up to 10 MB and 40 megapixels; SVG and animated GIF files are rejected
+- Website shortcuts require HTTP/HTTPS URLs without credentials; custom website icons and cursors accept only bounded PNG/WebP raster data, never SVG or remote icon tracking
 - Vercel headers include CSP, `nosniff`, frame restrictions, referrer policy, and a restrictive permissions policy
-- Quick Settings CPU/RAM/GPU figures are visibly labeled **SIMULATED**. Online status and logical CPU thread count are browser-reported
+- Task Manager uses real NOVA window state and omits unsupported hardware/process telemetry. Online status and logical core count are explicitly browser-reported
 
 No application is automatically secure against malicious browser extensions, a compromised browser/device, or unsafe content opened on external sites. Do not store secrets in NOVA or its backups.
 
@@ -189,8 +197,11 @@ No application is automatically secure against malicious browser extensions, a c
 - App windows are lazy-loaded into separate chunks
 - Static CSS wallpapers avoid continuous canvas/WebGL work
 - Framer Motion is limited to short shell transitions
-- Performance mode disables backdrop blur/transparency compositing
-- Reduced motion respects both the operating system preference and NOVA settings
+- Performance mode uses opaque shell/window surfaces and disables backdrop blur
+- Individual desktop windows are memoized so drag/resize updates do not re-render unrelated apps; live window subscriptions are isolated to Task Manager and global search defers expensive filtering
+- Startup and shell motion respect both the operating system preference and NOVA settings; optional startup sound is gesture-gated and off by default
+- Context menus, media object URLs, animation timers, and global event listeners have explicit cleanup
+- Optional high contrast strengthens text, borders, focus indicators, and surface opacity; its sanitized preference remains compatible with version 1 backups
 - Semantic controls, visible focus indicators, labels, keyboard navigation, and status announcements are included
 - Responsive layouts adapt windows, navigation, app sidebars, and dialogs for smaller screens
 - Phone windows remove unnecessary drag/resize gestures and backdrop blur; the dock, desktop icons, panels, and browser controls use touch-specific layouts
@@ -200,10 +211,10 @@ For the target Windows 10 PC (Intel Core i5-3330, 8 GB RAM, GTX 960 2 GB), use a
 
 ## Verification
 
-Executed for the current implementation:
+Executed for the current implementation. The module audit, file map, review evidence, and deployment checklist are in [`docs/major-upgrade-review.md`](docs/major-upgrade-review.md):
 
 - `npm run typecheck` — passed
-- `npm test` — **19 test files, 61 tests passed** (including Browser stop/reload, external navigation, fullscreen/offline handling, embedding policies, Notes autosave races, Files close guards, IndexedDB lifecycle, deep-link search, modal focus, Dock limits, Media object URLs, YouTube adaptation, responsive windows, and backup migration)
+- `npm test` — **24 test files, 88 tests passed** (including startup/reduced-motion behavior, reversible window snapping, minimized-app state preservation, real Task Manager states/actions, accessible context menus and search, notification clock preferences, Browser stop/reload and website launch intents, external navigation, fullscreen/offline handling, embedding policies, Notes autosave races, Files close guards, IndexedDB v3 website persistence and legacy restore preservation, modal focus, Dock limits, App Center management, Media object URLs, YouTube adaptation, responsive windows, preference migration, website validation, and version 1 backup compatibility)
 - `npm run build` — passed; static output generated successfully
 - `npm run test:pwa` — manifest, real PNG dimensions, maskable assets, worker boundaries, update-cache headers, and production artifacts validated
 - Production preview HTTP smoke — app, SPA fallback, manifest, worker, and icons returned 200; `node --check public/sw.js` passed
@@ -222,7 +233,7 @@ These results describe the checks actually run in the implementation environment
 - External pages have their own cookies, permissions, network requests, and privacy policies.
 - Media codec support depends on the browser. Media playlists last only for the current session and individual selections are limited to 500 MB.
 - The terminal is intentionally simulated and restricted; it cannot run CMD, PowerShell, Bash, packages, or user code.
-- Hardware performance gauges are simulated, not genuine Task Manager telemetry.
+- Task Manager sees only NOVA windows in the current session. It cannot report per-app/full-system CPU, RAM, GPU, native processes, or other browser tabs; guarded apps may prevent closing while unsaved changes exist.
 - Notifications are session-only; there is no push service, cloud sync, account system, or multi-device synchronization.
 - NOVA is not a native Android/iOS package. Installation and standalone behavior vary by browser. Offline support covers the cached app shell and previously loaded same-origin app assets, not arbitrary external websites or never-loaded lazy chunks.
 - One window instance per built-in app is currently used; multiple different apps can be arranged simultaneously.

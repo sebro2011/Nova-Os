@@ -1,9 +1,9 @@
-import type { BrowserBookmark, BrowserHistoryEntry, CalendarEvent, FileNode, Note } from '../types';
+import type { BrowserBookmark, BrowserHistoryEntry, CalendarEvent, FileNode, Note, WebsiteShortcut } from '../types';
 
 const DATABASE_NAME = 'nova-web-os';
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 
-export type StoreName = 'files' | 'notes' | 'events' | 'history' | 'bookmarks' | 'wallpapers' | 'meta';
+export type StoreName = 'files' | 'notes' | 'events' | 'history' | 'bookmarks' | 'websites' | 'wallpapers' | 'meta';
 
 interface MetaRecord {
   key: string;
@@ -16,6 +16,7 @@ export interface DatabaseSnapshot {
   events: CalendarEvent[];
   history: BrowserHistoryEntry[];
   bookmarks: BrowserBookmark[];
+  websites?: WebsiteShortcut[];
 }
 
 let databasePromise: Promise<IDBDatabase> | undefined;
@@ -41,6 +42,7 @@ function openDatabase(): Promise<IDBDatabase> {
       }
       if (!database.objectStoreNames.contains('history')) database.createObjectStore('history', { keyPath: 'id' });
       if (!database.objectStoreNames.contains('bookmarks')) database.createObjectStore('bookmarks', { keyPath: 'id' });
+      if (!database.objectStoreNames.contains('websites')) database.createObjectStore('websites', { keyPath: 'id' });
       if (!database.objectStoreNames.contains('wallpapers')) database.createObjectStore('wallpapers', { keyPath: 'id' });
       if (!database.objectStoreNames.contains('meta')) database.createObjectStore('meta', { keyPath: 'key' });
     };
@@ -154,24 +156,31 @@ export async function initializeDatabase(): Promise<void> {
 }
 
 export async function getDatabaseSnapshot(): Promise<DatabaseSnapshot> {
-  const [files, notes, events, history, bookmarks] = await Promise.all([
+  const [files, notes, events, history, bookmarks, websites] = await Promise.all([
     getAllRecords<FileNode>('files'),
     getAllRecords<Note>('notes'),
     getAllRecords<CalendarEvent>('events'),
     getAllRecords<BrowserHistoryEntry>('history'),
     getAllRecords<BrowserBookmark>('bookmarks'),
+    getAllRecords<WebsiteShortcut>('websites'),
   ]);
-  return { files, notes, events, history, bookmarks };
+  return { files, notes, events, history, bookmarks, websites };
 }
 
 export async function replaceDatabaseSnapshot(snapshot: DatabaseSnapshot): Promise<void> {
   const database = await openDatabase();
-  const transaction = database.transaction(['files', 'notes', 'events', 'history', 'bookmarks', 'meta'], 'readwrite');
+  const transaction = database.transaction(['files', 'notes', 'events', 'history', 'bookmarks', 'websites', 'meta'], 'readwrite');
   (['files', 'notes', 'events', 'history', 'bookmarks'] as const).forEach((storeName) => {
     const store = transaction.objectStore(storeName);
     store.clear();
     snapshot[storeName].forEach((record) => store.put(record));
   });
+  // Version 1 backups created before website shortcuts preserve the current collection.
+  if (snapshot.websites) {
+    const store = transaction.objectStore('websites');
+    store.clear();
+    snapshot.websites.forEach((record) => store.put(record));
+  }
   transaction.objectStore('meta').put({ key: 'initialized', value: '1' } satisfies MetaRecord);
   await transactionDone(transaction);
 }

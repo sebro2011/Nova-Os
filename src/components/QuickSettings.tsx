@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Activity, ArrowUpRight, Cpu, Gauge, Moon, Sun, Wifi, WifiOff } from 'lucide-react';
 import { usePreferences } from '../context/PreferencesContext';
+import { useLauncher } from '../context/LaunchContext';
 import { useModalFocus } from '../hooks/useModalFocus';
 
 export function QuickSettings({ onClose, onOpenSettings }: { onClose: () => void; onOpenSettings: () => void }) {
   const { preferences, updatePreferences } = usePreferences();
+  const { openApp } = useLauncher();
   const systemReducedMotion = useReducedMotion();
   const [online, setOnline] = useState(navigator.onLine);
   const dialogRef = useModalFocus<HTMLElement>(true, onClose);
@@ -45,16 +47,13 @@ export function QuickSettings({ onClose, onOpenSettings }: { onClose: () => void
             <Moon size={17} className={preferences.reduceMotion ? 'accent-text' : 'text-ink/65'} /><p className="mt-3 text-xs font-medium">Reduce motion</p><p className="mt-1 text-[10px] text-muted">{preferences.reduceMotion ? 'Enabled' : 'System default'}</p>
           </button>
         </div>
-        <div className="nova-card mt-3 p-3.5">
-          <div className="flex items-center gap-2"><Activity size={14} className="accent-text" /><p className="text-xs font-medium">Performance widget</p><span className="ml-auto rounded border border-amber-300/20 bg-amber-300/10 px-1.5 py-0.5 text-[8px] font-bold tracking-wider text-amber-200">SIMULATED</span></div>
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-            {[['CPU', '18%'], ['RAM', '42%'], ['GPU', '7%']].map(([label, value]) => <div key={label} className="rounded-lg bg-black/15 p-2"><p className="text-sm font-semibold tabular-nums text-ink/75">{value}</p><p className="mt-0.5 text-[9px] tracking-wider text-muted">{label}</p></div>)}
-          </div>
-          <p className="mt-2.5 text-[10px] leading-4 text-muted">Illustrative values only—not real hardware telemetry.</p>
-        </div>
+        <button className="nova-card mt-3 w-full p-3.5 text-left transition-colors hover:bg-ink/[0.05]" onClick={() => { openApp('task-manager'); onClose(); }}>
+          <div className="flex items-center gap-2"><Activity size={14} className="accent-text" /><p className="text-xs font-medium">NOVA Task Manager</p><ArrowUpRight size={13} className="ml-auto text-muted" /></div>
+          <p className="mt-2 text-[10px] leading-4 text-muted">View real running and minimized NOVA windows. Browser apps cannot provide full CPU, RAM, or GPU telemetry.</p>
+        </button>
         <div className="mt-3 flex items-center gap-2 rounded-xl border border-ink/[0.06] px-3 py-2.5 text-[11px] text-ink/65">
           {online ? <Wifi size={14} className="text-nova-cyan" /> : <WifiOff size={14} className="text-amber-300" />}
-          <span>Browser: {online ? 'online' : 'offline'}</span><span className="ml-auto flex items-center gap-1"><Cpu size={12} /> {navigator.hardwareConcurrency || '—'} threads</span>
+          <span>Browser: {online ? 'online' : 'offline'}</span><span className="ml-auto flex items-center gap-1" title="Logical processor count reported by this browser"><Cpu size={12} /> {navigator.hardwareConcurrency || '—'} browser-reported cores</span>
         </div>
       </motion.section>
     </div>

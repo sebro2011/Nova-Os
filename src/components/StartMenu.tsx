@@ -13,12 +13,12 @@ export function StartMenu({ onClose, onOpen }: { onClose: () => void; onOpen: (a
   const systemReducedMotion = useReducedMotion();
   const dialogRef = useModalFocus<HTMLElement>(true, onClose);
   const apps = useMemo(() => appList
-    .filter((app) => `${app.title} ${app.description}`.toLowerCase().includes(query.toLowerCase()))
-    .sort((a, b) => Number(preferences.dockPinned.includes(b.id)) - Number(preferences.dockPinned.includes(a.id))), [query, preferences.dockPinned]);
+    .filter((app) => !preferences.removedApps.includes(app.id) && `${app.title} ${app.description}`.toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => Number(preferences.dockPinned.includes(b.id)) - Number(preferences.dockPinned.includes(a.id))), [query, preferences.dockPinned, preferences.removedApps]);
   const featured = useMemo(() => [...preferences.recentApps, ...preferences.dockPinned]
-    .filter((id, index, all) => all.indexOf(id) === index)
+    .filter((id, index, all) => all.indexOf(id) === index && !preferences.removedApps.includes(id))
     .map((id) => appRegistry[id])
-    .slice(0, 5), [preferences.recentApps, preferences.dockPinned]);
+    .slice(0, 5), [preferences.recentApps, preferences.dockPinned, preferences.removedApps]);
 
   const appButton = (app: AppDefinition) => {
     const Icon = app.icon;

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { BrowserStatusPage, type BrowserStatusKind } from '../components/BrowserStatusPage';
 import { useNotifications } from '../context/NotificationContext';
+import { useLauncher } from '../context/LaunchContext';
 import { clearStore, deleteRecord, deleteRecords, getAllRecords, initializeDatabase, putRecord } from '../lib/db';
 import { displayUrl, getEmbeddingRestriction, getMixedContentRestriction, getYouTubeEmbedUrl, normalizeWebUrl } from '../lib/browser';
 import { createId, errorMessage, formatDateTime } from '../lib/utils';
@@ -56,6 +57,7 @@ export default function BrowserApp() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const browserRootRef = useRef<HTMLDivElement>(null);
   const { notify } = useNotifications();
+  const { consumeLaunchIntent } = useLauncher();
   const historyTotal = useRef(0);
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
   const embeddingRestriction = restrictionFor(activeTab.url);
@@ -152,6 +154,11 @@ export default function BrowserApp() {
       setError(caught instanceof Error ? caught.message : 'Invalid address.');
     }
   };
+
+  useEffect(() => {
+    const intent = consumeLaunchIntent('browser');
+    if (intent?.url) void navigate(intent.url);
+  }, [consumeLaunchIntent]);
 
   const go = (index: number) => {
     const url = activeTab.stack[index];

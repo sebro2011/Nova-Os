@@ -1,6 +1,6 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 import {
-  Calculator, CalendarDays, CircleHelp, Folder, Globe2, LayoutGrid,
+  Activity, Calculator, CalendarDays, CircleHelp, Folder, Globe2, LayoutGrid,
   NotebookPen, PlayCircle, Settings2, SquareTerminal, type LucideIcon,
 } from 'lucide-react';
 import type { AppId } from '../types';
@@ -25,7 +25,8 @@ export const appRegistry: Record<AppId, AppDefinition> = {
   calculator: { id: 'calculator', title: 'Calculator', description: 'Safe, keyboard-friendly arithmetic', category: 'Productivity', icon: Calculator, defaultWidth: 380, defaultHeight: 570, component: lazy(() => import('./CalculatorApp')) },
   calendar: { id: 'calendar', title: 'Calendar', description: 'Plan events without an account', category: 'Productivity', icon: CalendarDays, defaultWidth: 900, defaultHeight: 600, component: lazy(() => import('./CalendarApp')) },
   media: { id: 'media', title: 'Media Player', description: 'Play your local audio and video files', category: 'Media', icon: PlayCircle, defaultWidth: 820, defaultHeight: 570, component: lazy(() => import('./MediaApp')) },
-  'app-center': { id: 'app-center', title: 'App Center', description: 'Discover and pin built-in NOVA apps', category: 'System', icon: LayoutGrid, defaultWidth: 800, defaultHeight: 570, component: lazy(() => import('./AppCenterApp')) },
+  'app-center': { id: 'app-center', title: 'App Center', description: 'Manage built-in apps and website shortcuts', category: 'System', icon: LayoutGrid, defaultWidth: 800, defaultHeight: 570, component: lazy(() => import('./AppCenterApp')) },
+  'task-manager': { id: 'task-manager', title: 'Task Manager', description: 'Real NOVA window states and controls', category: 'System', icon: Activity, defaultWidth: 760, defaultHeight: 540, component: lazy(() => import('./TaskManagerApp')) },
   help: { id: 'help', title: 'Help Center', description: 'Guides, shortcuts, and honest limitations', category: 'System', icon: CircleHelp, defaultWidth: 780, defaultHeight: 570, component: lazy(() => import('./HelpApp')) },
 };
 

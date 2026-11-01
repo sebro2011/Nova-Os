@@ -54,4 +54,21 @@ describe('window manager', () => {
     act(() => result.current.updateBounds(id, { x: 40, y: 30, width: 800, height: 500 }));
     expect(result.current.windows[0]).toMatchObject({ x: 40, y: 30, width: 800, height: 500 });
   });
+
+  it('snaps to either half and restores the original floating geometry', () => {
+    const { result } = renderHook(() => useWindowManager(workspaceRef()));
+    act(() => result.current.openApp('files'));
+    const id = result.current.windows[0].id;
+    const original = { x: 40, y: 30, width: 800, height: 500 };
+    act(() => result.current.updateBounds(id, original));
+
+    act(() => result.current.snapWindow(id, 'left'));
+    expect(result.current.windows[0]).toMatchObject({ x: 8, y: 8, width: 588, height: 684, snapped: 'left', previousBounds: original });
+
+    act(() => result.current.snapWindow(id, 'right'));
+    expect(result.current.windows[0]).toMatchObject({ x: 604, y: 8, width: 588, height: 684, snapped: 'right', previousBounds: original });
+
+    act(() => result.current.snapWindow(id, 'right'));
+    expect(result.current.windows[0]).toMatchObject({ ...original, snapped: undefined, previousBounds: undefined });
+  });
 });
