@@ -9,7 +9,8 @@ export type AppId =
   | 'media'
   | 'app-center'
   | 'task-manager'
-  | 'help';
+  | 'help'
+  | 'writer';
 
 export type ThemeName = 'cosmic' | 'midnight' | 'nebula';
 export type AccentName = 'blue' | 'violet' | 'cyan';
@@ -18,6 +19,7 @@ export type GlassIntensity = 'subtle' | 'balanced' | 'rich';
 export type WindowRadius = 'small' | 'medium' | 'large';
 export type DesktopIconSize = 'small' | 'medium' | 'large';
 export type TaskbarSize = 'auto' | 'compact' | 'large';
+export type NovaLanguage = 'en' | 'si' | 'ta';
 
 export interface AppLaunchIntent {
   recordId?: string;
@@ -29,6 +31,7 @@ export interface NovaPreferences {
   colorMode: 'dark' | 'light';
   theme: ThemeName;
   accent: AccentName;
+  language: NovaLanguage;
   wallpaper: WallpaperName;
   customWallpaperId: string | null;
   startupAnimation: boolean;
@@ -53,6 +56,7 @@ export interface NovaPreferences {
   clock24h: boolean;
   dockPinned: AppId[];
   recentApps: AppId[];
+  recentOfficeFiles: string[];
   removedApps: AppId[];
 }
 

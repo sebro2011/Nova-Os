@@ -34,7 +34,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetPreferences = useCallback(() => {
-    setPreferences({ ...defaultPreferences, dockPinned: [...defaultPreferences.dockPinned], recentApps: [], removedApps: [] });
+    setPreferences({ ...defaultPreferences, dockPinned: [...defaultPreferences.dockPinned], recentApps: [], recentOfficeFiles: [], removedApps: [] });
   }, []);
 
   const value = useMemo(() => ({ preferences, updatePreferences, resetPreferences, storageError }), [preferences, updatePreferences, resetPreferences, storageError]);

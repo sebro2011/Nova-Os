@@ -6,7 +6,7 @@ export const WELCOME_KEY = 'nova.welcomed.v1';
 
 const appIds: AppId[] = [
   'files', 'browser', 'terminal', 'settings', 'notes', 'calculator',
-  'calendar', 'media', 'app-center', 'task-manager', 'help',
+  'calendar', 'media', 'app-center', 'task-manager', 'help', 'writer',
 ];
 
 const protectedAppIds = new Set<AppId>(['settings', 'app-center', 'browser', 'task-manager']);
@@ -15,6 +15,7 @@ export const defaultPreferences: NovaPreferences = {
   colorMode: 'dark',
   theme: 'cosmic',
   accent: 'blue',
+  language: 'en',
   wallpaper: 'aurora',
   customWallpaperId: null,
   startupAnimation: true,
@@ -39,6 +40,7 @@ export const defaultPreferences: NovaPreferences = {
   clock24h: false,
   dockPinned: ['files', 'browser', 'notes', 'terminal', 'settings'],
   recentApps: [],
+  recentOfficeFiles: [],
   removedApps: [],
 };
 
@@ -51,7 +53,7 @@ function enumValue<T extends string>(value: unknown, allowed: readonly T[], fall
 }
 
 export function sanitizePreferences(value: unknown): NovaPreferences {
-  if (!isRecord(value)) return { ...defaultPreferences, dockPinned: [...defaultPreferences.dockPinned], recentApps: [], removedApps: [] };
+  if (!isRecord(value)) return { ...defaultPreferences, dockPinned: [...defaultPreferences.dockPinned], recentApps: [], recentOfficeFiles: [], removedApps: [] };
   const dockPinned = Array.isArray(value.dockPinned)
     ? value.dockPinned.filter((id): id is AppId => typeof id === 'string' && appIds.includes(id as AppId)).slice(0, 10)
     : defaultPreferences.dockPinned;
@@ -60,6 +62,9 @@ export function sanitizePreferences(value: unknown): NovaPreferences {
     : [];
   const removedApps = Array.isArray(value.removedApps)
     ? value.removedApps.filter((id): id is AppId => typeof id === 'string' && appIds.includes(id as AppId) && !protectedAppIds.has(id as AppId))
+    : [];
+  const recentOfficeFiles = Array.isArray(value.recentOfficeFiles)
+    ? value.recentOfficeFiles.filter((id): id is string => typeof id === 'string' && id.length > 0 && id.length <= 140).slice(0, 50)
     : [];
   const customCursor = sanitizeRasterDataUrl(value.customCursor);
 
@@ -71,6 +76,7 @@ export function sanitizePreferences(value: unknown): NovaPreferences {
     accent: ['blue', 'violet', 'cyan'].includes(String(value.accent))
       ? value.accent as NovaPreferences['accent']
       : defaultPreferences.accent,
+    language: enumValue(value.language, ['en', 'si', 'ta'] as const, defaultPreferences.language),
     wallpaper: ['aurora', 'orbit', 'starlight', 'custom'].includes(String(value.wallpaper))
       ? value.wallpaper as NovaPreferences['wallpaper']
       : defaultPreferences.wallpaper,
@@ -99,6 +105,7 @@ export function sanitizePreferences(value: unknown): NovaPreferences {
     clock24h: typeof value.clock24h === 'boolean' ? value.clock24h : defaultPreferences.clock24h,
     dockPinned: [...new Set(dockPinned)],
     recentApps: [...new Set(recentApps)],
+    recentOfficeFiles: [...new Set(recentOfficeFiles)],
     removedApps: [...new Set(removedApps)],
   };
 }

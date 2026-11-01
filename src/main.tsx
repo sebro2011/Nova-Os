@@ -3,14 +3,17 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { PreferencesProvider } from './context/PreferencesContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { LocalizationProvider } from './context/LocalizationContext';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <PreferencesProvider>
-      <NotificationProvider>
-        <App />
-      </NotificationProvider>
+      <LocalizationProvider>
+        <NotificationProvider>
+          <App />
+        </NotificationProvider>
+      </LocalizationProvider>
     </PreferencesProvider>
   </React.StrictMode>,
 );

@@ -12,6 +12,7 @@ import { usePhoneLayout } from '../hooks/useMediaQuery';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { createId, downloadTextFile, errorMessage, formatBytes, formatDateTime } from '../lib/utils';
 import type { FileNode } from '../types';
+import { officeAppForMime } from './office/services/office-navigation';
 
 type DialogMode = 'create-folder' | 'create-file' | 'rename';
 
@@ -27,7 +28,7 @@ export default function FilesApp() {
   const [query, setQuery] = useState('');
   const uploadRef = useRef<HTMLInputElement>(null);
   const { notify } = useNotifications();
-  const { consumeLaunchIntent } = useLauncher();
+  const { consumeLaunchIntent, openApp } = useLauncher();
   const isPhone = usePhoneLayout();
   const dialogRef = useModalFocus<HTMLFormElement>(Boolean(dialog), () => setDialog(null));
 
@@ -48,7 +49,11 @@ export default function FilesApp() {
     void load();
     const refresh = () => void load();
     window.addEventListener('nova:data-imported', refresh);
-    return () => window.removeEventListener('nova:data-imported', refresh);
+    window.addEventListener('nova:files-changed', refresh);
+    return () => {
+      window.removeEventListener('nova:data-imported', refresh);
+      window.removeEventListener('nova:files-changed', refresh);
+    };
   }, [load]);
 
   const selected = files.find((file) => file.id === selectedId);
@@ -79,11 +84,16 @@ export default function FilesApp() {
     if (target.trashed) setCurrentFolderId('trash');
     else if (target.kind === 'folder') setCurrentFolderId(target.id);
     else {
+      const officeApp = officeAppForMime(target.mimeType);
+      if (officeApp) {
+        openApp(officeApp, { recordId: target.id });
+        return;
+      }
       setCurrentFolderId(target.parentId ?? 'root');
       setEditorFileId(target.id);
       setEditorContent(target.content);
     }
-  }, [loading, files, consumeLaunchIntent]);
+  }, [loading, files, consumeLaunchIntent, openApp]);
 
   useEffect(() => {
     if (loading || currentFolderId === 'trash') return;
@@ -128,6 +138,11 @@ export default function FilesApp() {
   const openItem = (file: FileNode) => {
     if (file.kind === 'folder') navigate(file.id);
     else {
+      const officeApp = officeAppForMime(file.mimeType);
+      if (officeApp) {
+        openApp(officeApp, { recordId: file.id });
+        return;
+      }
       setEditorFileId(file.id);
       setEditorContent(file.content);
     }
