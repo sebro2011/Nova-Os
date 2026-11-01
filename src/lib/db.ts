@@ -46,7 +46,10 @@ function openDatabase(): Promise<IDBDatabase> {
     };
     request.onsuccess = () => {
       const database = request.result;
-      database.onversionchange = () => database.close();
+      database.onversionchange = () => {
+        database.close();
+        databasePromise = undefined;
+      };
       resolve(database);
     };
     request.onerror = () => reject(request.error ?? new Error('Could not open NOVA local storage.'));

@@ -19,6 +19,7 @@ export const defaultPreferences: NovaPreferences = {
   compactMode: false,
   clock24h: false,
   dockPinned: ['files', 'browser', 'notes', 'terminal', 'settings'],
+  recentApps: [],
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -26,10 +27,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export function sanitizePreferences(value: unknown): NovaPreferences {
-  if (!isRecord(value)) return { ...defaultPreferences, dockPinned: [...defaultPreferences.dockPinned] };
+  if (!isRecord(value)) return { ...defaultPreferences, dockPinned: [...defaultPreferences.dockPinned], recentApps: [] };
   const dockPinned = Array.isArray(value.dockPinned)
     ? value.dockPinned.filter((id): id is AppId => typeof id === 'string' && appIds.includes(id as AppId)).slice(0, 10)
     : defaultPreferences.dockPinned;
+  const recentApps = Array.isArray(value.recentApps)
+    ? value.recentApps.filter((id): id is AppId => typeof id === 'string' && appIds.includes(id as AppId)).slice(0, 5)
+    : [];
 
   return {
     colorMode: value.colorMode === 'light' ? 'light' : defaultPreferences.colorMode,
@@ -50,6 +54,7 @@ export function sanitizePreferences(value: unknown): NovaPreferences {
     compactMode: typeof value.compactMode === 'boolean' ? value.compactMode : defaultPreferences.compactMode,
     clock24h: typeof value.clock24h === 'boolean' ? value.clock24h : defaultPreferences.clock24h,
     dockPinned: [...new Set(dockPinned)],
+    recentApps: [...new Set(recentApps)],
   };
 }
 

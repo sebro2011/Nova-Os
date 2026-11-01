@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { NovaWindow } from '../types';
 import { WindowFrame } from './WindowFrame';
@@ -23,8 +23,8 @@ const handlers = {
   onToggleMaximize: vi.fn(), onBoundsChange: vi.fn(),
 };
 
-function renderFrame(mobile: boolean) {
-  return render(<WindowFrame window={item} mobile={mobile} focused {...handlers} />);
+function renderFrame(mobile: boolean, overrides: Partial<NovaWindow> = {}) {
+  return render(<WindowFrame window={{ ...item, ...overrides }} mobile={mobile} focused {...handlers} />);
 }
 
 afterEach(() => {
@@ -43,6 +43,18 @@ describe('responsive window frame', () => {
     expect(screen.getByRole('button', { name: 'Close Notes' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Maximize Notes' })).not.toBeInTheDocument();
     expect(container.querySelector('.window-resize-handle')).not.toBeInTheDocument();
+  });
+
+  it('keeps keyboard-managed window title bars inside the workspace', () => {
+    const { container } = renderFrame(false, { y: -340 });
+    const frame = screen.getByRole('dialog', { name: 'Notes' });
+    vi.spyOn(frame.parentElement!, 'getBoundingClientRect').mockReturnValue({
+      width: 1_200, height: 700, x: 0, y: 0, top: 0, left: 0, right: 1_200, bottom: 700,
+      toJSON: () => ({}),
+    } as DOMRect);
+    fireEvent.keyDown(screen.getByLabelText(/Notes window controls/), { key: 'ArrowUp', altKey: true });
+    expect(handlers.onBoundsChange).toHaveBeenCalledWith({ x: 24, y: 8, width: 700, height: 500 });
+    expect(container).toBeInTheDocument();
   });
 
   it('preserves movable and resizable windows on larger screens', () => {

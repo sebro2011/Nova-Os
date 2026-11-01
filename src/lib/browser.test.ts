@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getEmbeddingRestriction, getYouTubeEmbedUrl, normalizeWebUrl } from './browser';
+import { getEmbeddingRestriction, getMixedContentRestriction, getYouTubeEmbedUrl, normalizeWebUrl } from './browser';
 
 describe('browser address normalization', () => {
   it('accepts HTTP and HTTPS addresses', () => {
@@ -22,6 +22,12 @@ describe('known frame embedding restrictions', () => {
   it('marks Google Search as external-only instead of rendering its blocked frame', () => {
     expect(getEmbeddingRestriction('https://www.google.com/search?q=nova')).toContain('Google Search');
     expect(getEmbeddingRestriction('https://google.com/search?q=nova')).toContain('Google Search');
+  });
+
+  it('requires external opening for insecure HTTP frames inside HTTPS', () => {
+    expect(getMixedContentRestriction('http://example.com', 'https:')).toContain('insecure HTTP');
+    expect(getMixedContentRestriction('http://localhost:5173', 'http:')).toBeNull();
+    expect(getMixedContentRestriction('https://example.com', 'https:')).toBeNull();
   });
 
   it('does not classify other addresses as external-only', () => {

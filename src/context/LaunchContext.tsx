@@ -1,9 +1,10 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import type { AppId } from '../types';
+import type { AppId, AppLaunchIntent } from '../types';
 
 export interface LaunchContextValue {
-  openApp: (appId: AppId) => void;
+  openApp: (appId: AppId, intent?: AppLaunchIntent) => void;
   closeActiveWindow: () => void;
+  consumeLaunchIntent: (appId: AppId) => AppLaunchIntent | undefined;
 }
 
 const LaunchContext = createContext<LaunchContextValue | null>(null);

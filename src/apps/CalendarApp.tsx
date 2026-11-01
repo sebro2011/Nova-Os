@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Plus, Trash2, X } from 'lucide-react';
 import { AppError, AppLoading } from '../components/AppStates';
 import { useNotifications } from '../context/NotificationContext';
+import { useLauncher } from '../context/LaunchContext';
+import { useModalFocus } from '../hooks/useModalFocus';
 import { deleteRecord, getAllRecords, initializeDatabase, putRecord } from '../lib/db';
 import { getCalendarDays } from '../lib/calendar';
 import { createId, errorMessage, toLocalDateKey } from '../lib/utils';
@@ -16,6 +18,8 @@ export default function CalendarApp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { notify } = useNotifications();
+  const { consumeLaunchIntent } = useLauncher();
+  const dialogRef = useModalFocus<HTMLFormElement>(Boolean(editing), () => setEditing(null));
 
   const load = useCallback(async () => {
     setError('');
@@ -37,8 +41,25 @@ export default function CalendarApp() {
     return () => window.removeEventListener('nova:data-imported', refresh);
   }, [load]);
 
+  useEffect(() => {
+    if (loading) return;
+    const intent = consumeLaunchIntent('calendar');
+    if (!intent?.recordId) return;
+    const target = events.find((event) => event.id === intent.recordId);
+    if (!target) return;
+    const date = new Date(`${target.date}T12:00:00`);
+    setSelectedDate(target.date);
+    setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+  }, [loading, events, consumeLaunchIntent]);
+
   const days = useMemo(() => getCalendarDays(month), [month]);
-  const selectedEvents = events.filter((event) => event.date === selectedDate).sort((a, b) => a.time.localeCompare(b.time));
+  const eventsByDate = useMemo(() => {
+    const grouped = new Map<string, CalendarEvent[]>();
+    events.forEach((event) => grouped.set(event.date, [...(grouped.get(event.date) ?? []), event]));
+    grouped.forEach((dayEvents) => dayEvents.sort((a, b) => a.time.localeCompare(b.time)));
+    return grouped;
+  }, [events]);
+  const selectedEvents = eventsByDate.get(selectedDate) ?? [];
   const todayKey = toLocalDateKey(today);
 
   const changeMonth = (offset: number) => setMonth((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
@@ -85,14 +106,14 @@ export default function CalendarApp() {
 
       <div className="grid min-h-[430px] lg:grid-cols-[minmax(0,1fr)_240px]">
         <section className="p-2.5 sm:p-4" aria-label="Month calendar">
-          <div className="grid grid-cols-7">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <div key={day} className="py-2 text-center text-[9px] font-semibold uppercase tracking-wider text-ink/25">{day}</div>)}</div>
+          <div className="grid grid-cols-7">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <div key={day} className="py-2 text-center text-[9px] font-semibold uppercase tracking-wider text-muted">{day}</div>)}</div>
           <div className="grid grid-cols-7 overflow-hidden rounded-xl border border-ink/[0.06]">
             {days.map((day) => {
-              const dayEvents = events.filter((event) => event.date === day.key);
+              const dayEvents = eventsByDate.get(day.key) ?? [];
               const selected = day.key === selectedDate;
               return <button key={day.key} className={`relative min-h-14 border-b border-r border-ink/[0.045] p-1.5 text-left align-top transition-colors last:border-r-0 sm:min-h-[74px] sm:p-2 ${selected ? 'bg-[rgba(var(--accent-rgb),0.1)]' : 'hover:bg-ink/[0.025]'} ${day.inCurrentMonth ? '' : 'bg-black/10'}`} onClick={() => { setSelectedDate(day.key); if (!day.inCurrentMonth) setMonth(new Date(day.date.getFullYear(), day.date.getMonth(), 1)); }} aria-label={`${day.date.toDateString()}, ${dayEvents.length} events`} aria-pressed={selected}>
-                <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] ${day.key === todayKey ? 'bg-[rgba(var(--accent-rgb),0.25)] font-semibold text-ink' : day.inCurrentMonth ? 'text-ink/60' : 'text-ink/20'}`}>{day.date.getDate()}</span>
-                <div className="mt-1 space-y-1">{dayEvents.slice(0, 2).map((event) => <span key={event.id} className="hidden truncate rounded bg-[rgba(var(--accent-rgb),0.12)] px-1 py-0.5 text-[8px] text-ink/50 sm:block">{event.time && `${event.time} `}{event.title}</span>)}{dayEvents.length > 0 && <span className="flex gap-0.5 sm:hidden">{dayEvents.slice(0, 3).map((event) => <span key={event.id} className="h-1 w-1 rounded-full bg-nova-blue" />)}</span>}</div>
+                <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] ${day.key === todayKey ? 'bg-[rgba(var(--accent-rgb),0.25)] font-semibold text-ink' : day.inCurrentMonth ? 'text-ink/60' : 'text-muted'}`}>{day.date.getDate()}</span>
+                <div className="mt-1 space-y-1">{dayEvents.slice(0, 2).map((event) => <span key={event.id} className="hidden truncate rounded bg-[rgba(var(--accent-rgb),0.12)] px-1 py-0.5 text-[8px] text-ink/65 sm:block">{event.time && `${event.time} `}{event.title}</span>)}{dayEvents.length > 0 && <span className="flex gap-0.5 sm:hidden">{dayEvents.slice(0, 3).map((event) => <span key={event.id} className="h-1 w-1 rounded-full bg-nova-blue" />)}</span>}</div>
               </button>;
             })}
           </div>
@@ -101,13 +122,13 @@ export default function CalendarApp() {
         <aside className="border-t border-ink/[0.06] bg-black/10 p-4 lg:border-l lg:border-t-0">
           <p className="eyebrow">DAY BRIEFING</p>
           <h3 className="mt-2 text-sm font-semibold text-ink/75">{new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(`${selectedDate}T12:00:00`))}</h3>
-          <div className="mt-4 space-y-2">{selectedEvents.map((event) => <button key={event.id} className="nova-card w-full p-3 text-left hover:bg-ink/[0.05]" onClick={() => setEditing(event)}><span className="block text-xs font-medium text-ink/75">{event.title}</span><span className="mt-1.5 flex items-center gap-1.5 text-[10px] text-ink/30"><Clock3 size={11} />{event.time || 'All day'}</span>{event.details && <span className="mt-2 line-clamp-2 text-[10px] leading-4 text-ink/30">{event.details}</span>}</button>)}{!selectedEvents.length && <div className="rounded-xl border border-dashed border-ink/[0.07] px-4 py-8 text-center"><CalendarDays size={22} className="mx-auto text-ink/12" /><p className="mt-3 text-[11px] text-ink/30">No events scheduled.</p></div>}</div>
+          <div className="mt-4 space-y-2">{selectedEvents.map((event) => <button key={event.id} className="nova-card w-full p-3 text-left hover:bg-ink/[0.05]" onClick={() => setEditing(event)}><span className="block text-xs font-medium text-ink/75">{event.title}</span><span className="mt-1.5 flex items-center gap-1.5 text-[10px] text-muted"><Clock3 size={11} />{event.time || 'All day'}</span>{event.details && <span className="mt-2 line-clamp-2 text-[10px] leading-4 text-muted">{event.details}</span>}</button>)}{!selectedEvents.length && <div className="rounded-xl border border-dashed border-ink/[0.07] px-4 py-8 text-center"><CalendarDays size={22} className="mx-auto text-ink/12" /><p className="mt-3 text-[11px] text-muted">No events scheduled.</p></div>}</div>
           <button className="nova-button nova-button-secondary mt-3 w-full text-[11px]" onClick={newEvent}><Plus size={13} /> Add on this day</button>
-          <p className="mt-4 text-[9px] leading-4 text-ink/20">Events stay in this browser. No account or remote calendar sync.</p>
+          <p className="mt-4 text-[9px] leading-4 text-muted">Events stay in this browser. No account or remote calendar sync.</p>
         </aside>
       </div>
 
-      {editing && <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditing(null)}><form className="glass-panel max-h-full w-full max-w-md overflow-y-auto p-5 app-scroll" onClick={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); void saveEvent(); }}><div className="flex items-center"><div className="flex-1"><p className="eyebrow">LOCAL EVENT</p><h3 className="mt-1 text-base font-semibold">{editing.id ? 'Edit event' : 'New event'}</h3></div><button type="button" className="icon-button" onClick={() => setEditing(null)} aria-label="Close event editor"><X size={16} /></button></div><label className="mt-5 block text-[11px] text-ink/45">Title<input className="nova-input mt-1.5" value={editing.title} onChange={(event) => setEditing({ ...editing, title: event.target.value })} maxLength={160} required autoFocus placeholder="What’s happening?" /></label><div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-[11px] text-ink/45">Date<input type="date" className="nova-input mt-1.5" value={editing.date} onChange={(event) => setEditing({ ...editing, date: event.target.value })} required /></label><label className="text-[11px] text-ink/45">Time<input type="time" className="nova-input mt-1.5" value={editing.time} onChange={(event) => setEditing({ ...editing, time: event.target.value })} /></label></div><label className="mt-3 block text-[11px] text-ink/45">Details<textarea className="nova-input mt-1.5 h-24" value={editing.details} onChange={(event) => setEditing({ ...editing, details: event.target.value })} maxLength={4000} placeholder="Optional notes" /></label><div className="mt-5 flex flex-wrap items-center gap-2">{editing.id && <button type="button" className="nova-button nova-button-danger mr-auto" onClick={() => { const item = editing; setEditing(null); void removeEvent(item); }}><Trash2 size={14} /> Delete</button>}<button type="button" className="nova-button nova-button-secondary ml-auto" onClick={() => setEditing(null)}>Cancel</button><button type="submit" className="nova-button">Save event</button></div></form></div>}
+      {editing && <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditing(null)}><form ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={editing.id ? 'Edit event' : 'New event'} className="glass-panel max-h-full w-full max-w-md overflow-y-auto p-5 app-scroll" onClick={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); void saveEvent(); }}><div className="flex items-center"><div className="flex-1"><p className="eyebrow">LOCAL EVENT</p><h3 className="mt-1 text-base font-semibold">{editing.id ? 'Edit event' : 'New event'}</h3></div><button type="button" className="icon-button" onClick={() => setEditing(null)} aria-label="Close event editor"><X size={16} /></button></div><label className="mt-5 block text-[11px] text-ink/65">Title<input className="nova-input mt-1.5" value={editing.title} onChange={(event) => setEditing({ ...editing, title: event.target.value })} maxLength={160} required autoFocus placeholder="What’s happening?" /></label><div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-[11px] text-ink/65">Date<input type="date" className="nova-input mt-1.5" value={editing.date} onChange={(event) => setEditing({ ...editing, date: event.target.value })} required /></label><label className="text-[11px] text-ink/65">Time<input type="time" className="nova-input mt-1.5" value={editing.time} onChange={(event) => setEditing({ ...editing, time: event.target.value })} /></label></div><label className="mt-3 block text-[11px] text-ink/65">Details<textarea className="nova-input mt-1.5 h-24" value={editing.details} onChange={(event) => setEditing({ ...editing, details: event.target.value })} maxLength={4000} placeholder="Optional notes" /></label><div className="mt-5 flex flex-wrap items-center gap-2">{editing.id && <button type="button" className="nova-button nova-button-danger mr-auto" onClick={() => { const item = editing; setEditing(null); void removeEvent(item); }}><Trash2 size={14} /> Delete</button>}<button type="button" className="nova-button nova-button-secondary ml-auto" onClick={() => setEditing(null)}>Cancel</button><button type="submit" className="nova-button">Save event</button></div></form></div>}
     </div>
   );
 }

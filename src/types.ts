@@ -14,6 +14,11 @@ export type ThemeName = 'cosmic' | 'midnight' | 'nebula';
 export type AccentName = 'blue' | 'violet' | 'cyan';
 export type WallpaperName = 'aurora' | 'orbit' | 'starlight' | 'custom';
 
+export interface AppLaunchIntent {
+  recordId?: string;
+  section?: 'appearance' | 'system' | 'data' | 'about';
+}
+
 export interface NovaPreferences {
   colorMode: 'dark' | 'light';
   theme: ThemeName;
@@ -25,6 +30,7 @@ export interface NovaPreferences {
   compactMode: boolean;
   clock24h: boolean;
   dockPinned: AppId[];
+  recentApps: AppId[];
 }
 
 export interface WindowBounds {

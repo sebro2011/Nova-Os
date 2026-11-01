@@ -38,7 +38,7 @@ export default function TerminalApp() {
     setBusy(true);
     setCommands((current) => [...current, command].slice(-50));
     setHistoryIndex(-1);
-    setLines((current) => [...current, { id: nextLineId++, text: command, kind: 'command' }]);
+    setLines((current) => [...current, { id: nextLineId++, text: command, kind: 'command' as const }].slice(-500));
     setInput('');
     try {
       const result = await executeTerminalCommand(command, {
@@ -48,9 +48,9 @@ export default function TerminalApp() {
         hardwareConcurrency: navigator.hardwareConcurrency,
       });
       if (result.clear) setLines([]);
-      else setLines((current) => [...current, ...result.lines.map((text) => ({ id: nextLineId++, text, kind: 'output' as const }))]);
+      else setLines((current) => [...current, ...result.lines.map((text) => ({ id: nextLineId++, text, kind: 'output' as const }))].slice(-500));
     } catch (error) {
-      setLines((current) => [...current, { id: nextLineId++, text: error instanceof Error ? error.message : 'Command failed safely.', kind: 'output' }]);
+      setLines((current) => [...current, { id: nextLineId++, text: error instanceof Error ? error.message : 'Command failed safely.', kind: 'output' as const }].slice(-500));
     } finally {
       setBusy(false);
       window.setTimeout(() => inputRef.current?.focus(), 0);
@@ -59,18 +59,18 @@ export default function TerminalApp() {
 
   return (
     <div className="dark-surface flex h-full flex-col bg-[#050811]/95 font-mono" onClick={() => inputRef.current?.focus()}>
-      <div className="flex items-center gap-2 border-b border-ink/[0.06] bg-ink/[0.02] px-3 py-2 text-[10px] text-ink/30"><LockKeyhole size={12} className="text-emerald-300/60" /> Restricted session <span className="ml-auto">NO CMD · NO POWERSHELL · NO EVAL</span></div>
+      <div className="flex items-center gap-2 border-b border-ink/[0.06] bg-ink/[0.02] px-3 py-2 text-[10px] text-muted"><LockKeyhole size={12} className="text-emerald-300/60" /> Restricted session <span className="ml-auto">NO CMD · NO POWERSHELL · NO EVAL</span></div>
       <div ref={scrollRef} className="app-scroll min-h-0 flex-1 overflow-y-auto p-4 text-[12px] leading-6" aria-live="polite">
         {lines.map((line) => line.kind === 'command' ? (
-          <div key={line.id} className="flex gap-2 text-ink/85"><span className="shrink-0 text-nova-cyan/70">explorer@nova<span className="text-ink/30">:~$</span></span><span className="whitespace-pre-wrap break-all">{line.text}</span></div>
-        ) : <div key={line.id} className={`whitespace-pre-wrap break-words ${line.kind === 'system' ? 'text-nova-blue/55' : 'text-ink/50'}`}>{line.text}</div>)}
-        {busy && <div className="text-ink/30">Processing restricted command…</div>}
+          <div key={line.id} className="flex gap-2 text-ink/85"><span className="shrink-0 text-nova-cyan/70">explorer@nova<span className="text-muted">:~$</span></span><span className="whitespace-pre-wrap break-all">{line.text}</span></div>
+        ) : <div key={line.id} className={`whitespace-pre-wrap break-words ${line.kind === 'system' ? 'text-nova-blue/55' : 'text-ink/65'}`}>{line.text}</div>)}
+        {busy && <div className="text-muted">Processing restricted command…</div>}
       </div>
       <form className="flex shrink-0 items-center gap-2 border-t border-ink/[0.055] px-4 py-3" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         <ChevronRight size={15} className="accent-text shrink-0" />
         <input
           ref={inputRef}
-          className="min-w-0 flex-1 bg-transparent font-mono text-xs text-ink/85 caret-nova-cyan outline-none placeholder:text-ink/20"
+          className="min-w-0 flex-1 bg-transparent font-mono text-xs text-ink/85 caret-nova-cyan outline-none placeholder:text-muted"
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {

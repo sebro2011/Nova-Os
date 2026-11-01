@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { NotificationTone, NovaNotification } from '../types';
 import { createId } from '../lib/utils';
 
@@ -14,6 +14,7 @@ interface NotificationContextValue {
   unreadCount: number;
   notify: (input: NotificationInput) => void;
   dismissToast: (id: string) => void;
+  dismissNotification: (id: string) => void;
   markAllRead: () => void;
   clearNotifications: () => void;
 }
@@ -23,11 +24,19 @@ const NotificationContext = createContext<NotificationContextValue | null>(null)
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<NovaNotification[]>([]);
   const [toastIds, setToastIds] = useState<string[]>([]);
-  const timers = useRef<number[]>([]);
+  const timers = useRef(new Map<string, number>());
 
   const dismissToast = useCallback((id: string) => {
+    const timer = timers.current.get(id);
+    if (timer !== undefined) window.clearTimeout(timer);
+    timers.current.delete(id);
     setToastIds((current) => current.filter((toastId) => toastId !== id));
   }, []);
+
+  const dismissNotification = useCallback((id: string) => {
+    dismissToast(id);
+    setNotifications((current) => current.filter((notification) => notification.id !== id));
+  }, [dismissToast]);
 
   const notify = useCallback(({ title, message, tone = 'info' }: NotificationInput) => {
     const id = createId('notification');
@@ -35,7 +44,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setNotifications((current) => [notification, ...current].slice(0, 50));
     setToastIds((current) => [...current.slice(-2), id]);
     const timer = window.setTimeout(() => dismissToast(id), 5_000);
-    timers.current.push(timer);
+    timers.current.set(id, timer);
   }, [dismissToast]);
 
   const markAllRead = useCallback(() => {
@@ -46,7 +55,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setNotifications([]);
     setToastIds([]);
     timers.current.forEach(window.clearTimeout);
-    timers.current = [];
+    timers.current.clear();
+  }, []);
+
+  useEffect(() => () => {
+    timers.current.forEach(window.clearTimeout);
+    timers.current.clear();
   }, []);
 
   const value = useMemo(() => ({
@@ -55,9 +69,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     unreadCount: notifications.filter((notification) => !notification.read).length,
     notify,
     dismissToast,
+    dismissNotification,
     markAllRead,
     clearNotifications,
-  }), [notifications, toastIds, notify, dismissToast, markAllRead, clearNotifications]);
+  }), [notifications, toastIds, notify, dismissToast, dismissNotification, markAllRead, clearNotifications]);
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 }

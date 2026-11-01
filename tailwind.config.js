@@ -7,6 +7,7 @@ export default {
         void: '#070913',
         panel: '#101423',
         ink: 'rgb(var(--ink-rgb) / <alpha-value>)',
+        muted: 'var(--muted)',
         nova: {
           blue: '#63a8ff',
           violet: '#a78bfa',

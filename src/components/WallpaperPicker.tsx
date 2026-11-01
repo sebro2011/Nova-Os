@@ -4,6 +4,7 @@ import { useNotifications } from '../context/NotificationContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { deleteRecord, getAllRecords, initializeDatabase, putRecord } from '../lib/db';
 import { createId, errorMessage, formatBytes } from '../lib/utils';
+import { optimizeWallpaper } from '../lib/image';
 import type { WallpaperRecord } from '../types';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -60,18 +61,16 @@ export function WallpaperPicker() {
   const uploadWallpaper = async (file?: File) => {
     if (!file) return;
     setUploading(true);
-    let bitmap: ImageBitmap | undefined;
     try {
       if (!ACCEPTED_TYPES.includes(file.type)) throw new Error('Choose a PNG, JPEG, or WebP image. SVG and animated GIF files are not accepted.');
       if (file.size > MAX_WALLPAPER_SIZE) throw new Error('Wallpapers are limited to 10 MB.');
-      bitmap = await createImageBitmap(file);
-      if (bitmap.width * bitmap.height > 40_000_000) throw new Error('Image dimensions are too large. Choose an image under 40 megapixels.');
+      const optimized = await optimizeWallpaper(file);
       const record: WallpaperRecord = {
         id: createId('wallpaper'),
         name: file.name.slice(0, 160) || 'Custom wallpaper',
-        type: file.type,
-        size: file.size,
-        blob: file,
+        type: optimized.type || file.type,
+        size: optimized.size,
+        blob: optimized,
         createdAt: new Date().toISOString(),
       };
       await putRecord('wallpapers', record);
@@ -81,7 +80,6 @@ export function WallpaperPicker() {
     } catch (error) {
       notify({ title: 'Wallpaper not added', message: errorMessage(error), tone: 'warning' });
     } finally {
-      bitmap?.close();
       setUploading(false);
     }
   };
@@ -110,7 +108,7 @@ export function WallpaperPicker() {
       </div>
       <div className="mt-2.5 grid grid-cols-3 gap-2">
         {(['aurora', 'orbit', 'starlight'] as const).map((wallpaper) => (
-          <button key={wallpaper} className={`rounded-xl border px-3 py-3 text-[10px] capitalize ${preferences.wallpaper === wallpaper ? 'border-[rgba(var(--accent-rgb),0.35)] accent-text bg-[rgba(var(--accent-rgb),0.07)]' : 'border-ink/[0.06] text-ink/35'}`} onClick={() => updatePreferences({ wallpaper })} aria-pressed={preferences.wallpaper === wallpaper}>{wallpaper}</button>
+          <button key={wallpaper} className={`rounded-xl border px-3 py-3 text-[10px] capitalize ${preferences.wallpaper === wallpaper ? 'border-[rgba(var(--accent-rgb),0.35)] accent-text bg-[rgba(var(--accent-rgb),0.07)]' : 'border-ink/[0.06] text-muted'}`} onClick={() => updatePreferences({ wallpaper })} aria-pressed={preferences.wallpaper === wallpaper}>{wallpaper}</button>
         ))}
       </div>
       {wallpapers.length > 0 && <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">{wallpapers.map((wallpaper) => (
@@ -122,8 +120,8 @@ export function WallpaperPicker() {
           onDelete={() => void removeWallpaper(wallpaper)}
         />
       ))}</div>}
-      {wallpapers.length === 0 && <button className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-ink/10 px-4 py-5 text-[10px] text-ink/30 transition-colors hover:bg-ink/[0.03]" onClick={() => inputRef.current?.click()}><Upload size={14} /> Choose your own desktop image</button>}
-      <p className="mt-2.5 text-[9px] leading-4 text-ink/25">PNG, JPEG, or WebP · 10 MB maximum · stored in IndexedDB. Custom images are not included in JSON backups.</p>
+      {wallpapers.length === 0 && <button className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-ink/10 px-4 py-5 text-[10px] text-muted transition-colors hover:bg-ink/[0.03]" onClick={() => inputRef.current?.click()}><Upload size={14} /> Choose your own desktop image</button>}
+      <p className="mt-2.5 text-[9px] leading-4 text-muted">PNG, JPEG, or WebP · 10 MB maximum · large images are downscaled for local storage. Custom images are not included in JSON backups.</p>
     </section>
   );
 }

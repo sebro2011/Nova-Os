@@ -3,6 +3,18 @@ import { isValidDateKey } from './calendar';
 import { validateFileName } from './files';
 import { sanitizePreferences } from './preferences';
 
+export const MAX_BACKUP_FILE_BYTES = 64 * 1024 * 1024;
+
+/** Uses the same size contract for export and import so NOVA never creates a backup it will reject. */
+export function serializeBackup(backup: NovaBackup): string {
+  const serialized = JSON.stringify(backup, null, 2);
+  const size = new TextEncoder().encode(serialized).byteLength;
+  if (size > MAX_BACKUP_FILE_BYTES) {
+    throw new Error('This backup exceeds the 64 MB safety limit. Your local data has not been changed; export individual text files and reduce very large notes or files before retrying.');
+  }
+  return serialized;
+}
+
 function record(value: unknown, label: string): Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new Error(`${label} must be an object.`);
@@ -65,21 +77,34 @@ function validateFiles(value: unknown): FileNode[] {
   if (!root || root.kind !== 'folder' || root.parentId !== null || root.trashed) {
     throw new Error('Backup must contain a valid, non-trashed root folder with ID “root”.');
   }
+  const existingHome = files.find((file) => file.id === 'home');
+  if (existingHome && (existingHome.kind !== 'folder' || existingHome.trashed)) {
+    throw new Error('Backup contains an invalid Home folder.');
+  }
+  if (!existingHome) {
+    files.push({ ...root, id: 'home', parentId: 'root', name: 'Home' });
+    ids.add('home');
+  }
+
+  const byId = new Map(files.map((file) => [file.id, file]));
+  const verified = new Set<string>();
   for (const file of files) {
-    if (file.id !== 'root' && (!file.parentId || !ids.has(file.parentId))) {
+    if (file.id !== 'root' && (!file.parentId || !byId.has(file.parentId))) {
       throw new Error(`File “${file.name}” has a missing parent folder.`);
     }
-    if (file.parentId) {
-      const parent = files.find((candidate) => candidate.id === file.parentId);
-      if (parent?.kind !== 'folder') throw new Error(`File “${file.name}” has a non-folder parent.`);
+    if (file.parentId && byId.get(file.parentId)?.kind !== 'folder') {
+      throw new Error(`File “${file.name}” has a non-folder parent.`);
     }
+    const path: FileNode[] = [];
     const visited = new Set<string>();
     let current: FileNode | undefined = file;
-    while (current?.parentId) {
+    while (current?.parentId && !verified.has(current.id)) {
       if (visited.has(current.id)) throw new Error('Backup contains a circular folder structure.');
       visited.add(current.id);
-      current = files.find((candidate) => candidate.id === current?.parentId);
+      path.push(current);
+      current = byId.get(current.parentId);
     }
+    path.forEach((item) => verified.add(item.id));
   }
   return files;
 }
