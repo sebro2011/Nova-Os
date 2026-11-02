@@ -87,11 +87,18 @@ export async function saveOfficeFile<K extends OfficeDocumentKind>(file: FileNod
   return updated;
 }
 
-export async function createPdfFile(name: string, bytes: Uint8Array, parentId?: string): Promise<FileNode> {
+export async function createPdfFile(name: string, bytes: Uint8Array, parentId?: string, autoRename = false): Promise<FileNode> {
   await initializeDatabase();
   const parent = parentId ?? await defaultParentId();
-  const fileName = withOfficeExtension(name, 'pdf');
-  await assertUniqueName(fileName, parent);
+  let fileName = withOfficeExtension(name, 'pdf');
+  if (autoRename) {
+    const siblings = await getAllRecords<FileNode>('files');
+    const names = new Set(siblings.filter((file) => !file.trashed && file.parentId === parent).map((file) => file.name.toLowerCase()));
+    const base = fileName.slice(0, -OFFICE_EXTENSION.pdf.length);
+    let suffix = 2;
+    while (names.has(fileName.toLowerCase()) && suffix < 10_000) fileName = `${base} ${suffix++}${OFFICE_EXTENSION.pdf}`;
+    if (names.has(fileName.toLowerCase())) throw new Error('Too many PDF files use this name. Choose a different name.');
+  } else await assertUniqueName(fileName, parent);
   const now = new Date().toISOString();
   const file: FileNode = { id: createId('office-pdf'), parentId: parent, name: fileName, kind: 'file', content: pdfBytesToDataUrl(bytes), mimeType: OFFICE_MIME.pdf, createdAt: now, updatedAt: now, trashed: false };
   await putRecord('files', file);

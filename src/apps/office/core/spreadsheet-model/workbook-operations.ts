@@ -152,10 +152,32 @@ export function addWorkbookSheet(workbook: WorkbookDocument): WorkbookDocument {
   return { sheets: [...workbook.sheets, sheet], activeSheetId: sheet.id };
 }
 
+function renameFormulaSheet(value: string, previousName: string, nextName: string): string {
+  if (!value.startsWith('=')) return value;
+  const strings: string[] = [];
+  const protectedFormula = value.replace(/"(?:[^"]|"")*"/g, (text) => {
+    strings.push(text);
+    return `\uE000${strings.length - 1}\uE001`;
+  });
+  const nextPrefix = /^[A-Za-z_][A-Za-z0-9_.]*$/.test(nextName) ? `${nextName}!` : `'${nextName.replace(/'/g, "''")}'!`;
+  const reference = /(^|[^A-Za-z0-9_])((?:'(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_.]*)!)(?=\$?[A-Z]{1,2}\$?[1-9]\d{0,2}(?![A-Za-z0-9_]))/g;
+  return protectedFormula.replace(reference, (match, leading: string, prefix: string) => (
+    formulaSheetName(prefix, '').toLocaleLowerCase() === previousName.toLocaleLowerCase() ? `${leading}${nextPrefix}` : match
+  )).replace(/\uE000(\d+)\uE001/g, (_match, index: string) => strings[Number(index)]);
+}
+
 export function renameWorkbookSheet(workbook: WorkbookDocument, sheetId: string, name: string): WorkbookDocument {
   const trimmed = name.trim();
+  const source = workbook.sheets.find((sheet) => sheet.id === sheetId);
+  if (!source) throw new Error('The selected sheet no longer exists.');
   if (!trimmed || trimmed.length > 60 || workbook.sheets.some((sheet) => sheet.id !== sheetId && sheet.name.toLocaleLowerCase() === trimmed.toLocaleLowerCase())) throw new Error('Sheet names must be unique and between 1 and 60 characters.');
-  return { ...workbook, sheets: workbook.sheets.map((sheet) => sheet.id === sheetId ? { ...sheet, name: trimmed } : sheet) };
+  return {
+    ...workbook,
+    sheets: workbook.sheets.map((sheet) => ({
+      ...(sheet.id === sheetId ? { ...sheet, name: trimmed } : sheet),
+      cells: Object.fromEntries(Object.entries(sheet.cells).map(([address, cell]) => [address, { ...cell, value: renameFormulaSheet(cell.value, source.name, trimmed) }])),
+    })),
+  };
 }
 
 export function deleteWorkbookSheet(workbook: WorkbookDocument, sheetId: string): WorkbookDocument {

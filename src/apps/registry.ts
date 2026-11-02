@@ -1,7 +1,7 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 import {
-  Activity, Calculator, CalendarDays, CircleHelp, FileText, Folder, Globe2, LayoutGrid,
-  NotebookPen, PlayCircle, Settings2, SquareTerminal, type LucideIcon,
+  Activity, Calculator, CalendarDays, CircleHelp, FileText, FileType2, Folder, Globe2, LayoutGrid,
+  LayoutTemplate, NotebookPen, PlayCircle, Presentation, Settings2, Sheet, SquareTerminal, type LucideIcon,
 } from 'lucide-react';
 import type { AppId } from '../types';
 
@@ -28,7 +28,11 @@ export const appRegistry: Record<AppId, AppDefinition> = {
   'app-center': { id: 'app-center', title: 'App Center', description: 'Manage built-in apps and website shortcuts', category: 'System', icon: LayoutGrid, defaultWidth: 800, defaultHeight: 570, component: lazy(() => import('./AppCenterApp')) },
   'task-manager': { id: 'task-manager', title: 'Task Manager', description: 'Real NOVA window states and controls', category: 'System', icon: Activity, defaultWidth: 760, defaultHeight: 540, component: lazy(() => import('./TaskManagerApp')) },
   help: { id: 'help', title: 'Help Center', description: 'Guides, shortcuts, and honest limitations', category: 'System', icon: CircleHelp, defaultWidth: 780, defaultHeight: 570, component: lazy(() => import('./HelpApp')) },
+  office: { id: 'office', title: 'NOVA Office Hub', description: 'Create, find, and open your local Office documents', category: 'Productivity', icon: LayoutTemplate, defaultWidth: 1060, defaultHeight: 700, component: lazy(() => import('./office/hub/OfficeHubApp')) },
   writer: { id: 'writer', title: 'NOVA Writer', description: 'Structured local documents with Office compatibility', category: 'Productivity', icon: FileText, defaultWidth: 1120, defaultHeight: 720, component: lazy(() => import('./office/writer/WriterApp')) },
+  sheets: { id: 'sheets', title: 'NOVA Sheets', description: 'Local workbooks with formulas, formatting, charts, and CSV', category: 'Productivity', icon: Sheet, defaultWidth: 1180, defaultHeight: 740, component: lazy(() => import('./office/sheets/SheetsApp')) },
+  slides: { id: 'slides', title: 'NOVA Slides', description: 'Local presentations with layouts, objects, and PowerPoint export', category: 'Productivity', icon: Presentation, defaultWidth: 1180, defaultHeight: 740, component: lazy(() => import('./office/slides/SlidesApp')) },
+  pdf: { id: 'pdf', title: 'NOVA PDF', description: 'Read, search, rotate, and download local PDF documents', category: 'Productivity', icon: FileType2, defaultWidth: 1100, defaultHeight: 740, component: lazy(() => import('./office/pdf/PdfApp')) },
 };
 
 export const appList = Object.values(appRegistry);

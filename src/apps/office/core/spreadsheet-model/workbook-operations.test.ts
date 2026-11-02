@@ -42,6 +42,17 @@ describe('workbook structure and reference remapping', () => {
     expect(new WorkbookFormulaEngine(sorted).getCell(sheet.id, 'C2')).toBe(20);
   });
 
+  it('renames cross-sheet formula references without rewriting string literals', () => {
+    const workbook = createWorkbookDocument();
+    const source = workbook.sheets[0];
+    source.cells.A1 = { value: '12' };
+    const added = addWorkbookSheet(workbook);
+    added.sheets[1].cells.B1 = { value: "='Sheet 1'!A1*2&\" Sheet 1!A1 \"" };
+    const renamed = renameWorkbookSheet(added, source.id, 'Sales Data');
+    expect(renamed.sheets[1].cells.B1.value).toBe("='Sales Data'!A1*2&\" Sheet 1!A1 \"");
+    expect(new WorkbookFormulaEngine(renamed).getCell(renamed.sheets[1].id, 'B1')).toBe('24 Sheet 1!A1 ');
+  });
+
   it('adds, renames, duplicates, and validates multiple sheets', () => {
     const workbook = createWorkbookDocument();
     const added = addWorkbookSheet(workbook);

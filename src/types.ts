@@ -10,7 +10,11 @@ export type AppId =
   | 'app-center'
   | 'task-manager'
   | 'help'
-  | 'writer';
+  | 'office'
+  | 'writer'
+  | 'sheets'
+  | 'slides'
+  | 'pdf';
 
 export type ThemeName = 'cosmic' | 'midnight' | 'nebula';
 export type AccentName = 'blue' | 'violet' | 'cyan';
