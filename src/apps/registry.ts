@@ -1,7 +1,7 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 import {
   Activity, Calculator, CalendarDays, CircleHelp, FileText, Folder, Globe2, LayoutGrid,
-  NotebookPen, PlayCircle, Settings2, SquareTerminal, type LucideIcon,
+  NotebookPen, PlayCircle, Settings2, Sheet, SquareTerminal, type LucideIcon,
 } from 'lucide-react';
 import type { AppId } from '../types';
 
@@ -29,6 +29,7 @@ export const appRegistry: Record<AppId, AppDefinition> = {
   'task-manager': { id: 'task-manager', title: 'Task Manager', description: 'Real NOVA window states and controls', category: 'System', icon: Activity, defaultWidth: 760, defaultHeight: 540, component: lazy(() => import('./TaskManagerApp')) },
   help: { id: 'help', title: 'Help Center', description: 'Guides, shortcuts, and honest limitations', category: 'System', icon: CircleHelp, defaultWidth: 780, defaultHeight: 570, component: lazy(() => import('./HelpApp')) },
   writer: { id: 'writer', title: 'NOVA Writer', description: 'Structured local documents with Office compatibility', category: 'Productivity', icon: FileText, defaultWidth: 1120, defaultHeight: 720, component: lazy(() => import('./office/writer/WriterApp')) },
+  sheets: { id: 'sheets', title: 'NOVA Sheets', description: 'Local workbooks with formulas, formatting, charts, and CSV', category: 'Productivity', icon: Sheet, defaultWidth: 1180, defaultHeight: 740, component: lazy(() => import('./office/sheets/SheetsApp')) },
 };
 
 export const appList = Object.values(appRegistry);
