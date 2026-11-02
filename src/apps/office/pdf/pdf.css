@@ -1,0 +1,59 @@
+.pdf-file-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-viewer {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  outline: 0;
+  background: var(--app-bg);
+}
+.pdf-viewer:fullscreen { width: 100%; height: 100%; background: var(--app-bg); }
+.pdf-toolbar { justify-content: center; }
+.pdf-page-control { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 10px; }
+.pdf-page-control input { width: 52px; height: 28px; padding: 4px; border: 1px solid var(--line); border-radius: 5px; color: var(--text); background: var(--editor-bg); text-align: center; }
+.pdf-zoom-label { min-width: 38px; color: var(--muted); font-size: 10px; text-align: center; }
+
+.pdf-search-panel { flex: 0 0 auto; border-bottom: 1px solid var(--line); background: var(--glass); }
+.pdf-search-panel form { display: flex; align-items: center; gap: 6px; padding: 7px 10px; color: var(--muted); }
+.pdf-search-panel form > input { min-width: 100px; flex: 1; height: 30px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; outline: 0; color: var(--text); background: var(--editor-bg); font-size: 11px; }
+.pdf-search-panel form > input:focus { border-color: var(--accent); }
+.pdf-search-results { max-height: 180px; overflow-y: auto; padding: 0 10px 8px; }
+.pdf-search-results > p { padding: 7px 2px; color: var(--muted); font-size: 10px; }
+.pdf-search-results > button { display: flex; width: 100%; flex-direction: column; gap: 3px; padding: 7px 9px; border: 0; border-radius: 6px; color: var(--text); background: transparent; text-align: left; }
+.pdf-search-results > button:hover { background: rgb(var(--ink-rgb) / 0.07); }
+.pdf-search-results strong { color: var(--accent); font-size: 9px; }
+.pdf-search-results span { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+
+.pdf-canvas { display: block; flex: 1; min-height: 0; overflow: auto; padding: 22px; background: rgb(var(--ink-rgb) / 0.04); }
+.pdf-page-frame { position: relative; width: max-content; min-width: 120px; min-height: 100px; margin: 0 auto; background: #fff; box-shadow: 0 6px 30px rgb(0 0 0 / 0.3); }
+.pdf-page-frame canvas { display: block; max-width: none; background: #fff; }
+.pdf-page-loading { position: absolute; inset: 0; display: grid; place-items: center; min-height: 100px; color: #475569; background: rgb(255 255 255 / 0.85); font-size: 11px; }
+.pdf-page-error { width: min(420px, 70vw); padding: 24px; color: #b91c1c; background: #fff; font-size: 11px; line-height: 1.5; }
+
+.pdf-welcome { display: grid; flex: 1; min-height: 0; place-items: center; overflow-y: auto; padding: 24px; background: radial-gradient(circle at 50% 20%, rgb(var(--accent-rgb) / 0.08), transparent 48%); }
+.pdf-welcome > section { width: min(520px, 100%); text-align: center; }
+.pdf-welcome-icon { display: inline-flex; align-items: center; justify-content: center; width: 68px; height: 68px; margin-bottom: 18px; border: 1px solid rgb(var(--accent-rgb) / 0.25); border-radius: 20px; color: var(--accent); background: rgb(var(--accent-rgb) / 0.08); }
+.pdf-welcome h1 { margin-top: 7px; font-size: 26px; font-weight: 650; }
+.pdf-welcome h1 + p { max-width: 440px; margin: 12px auto 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.pdf-welcome-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 22px; }
+.pdf-welcome small { display: block; margin-top: 20px; color: var(--muted); font-size: 9px; }
+.pdf-welcome-error { margin: 14px 0 0; padding: 9px 12px; border: 1px solid rgb(244 63 94 / 0.25); border-radius: 7px; color: #fb7185; background: rgb(244 63 94 / 0.06); font-size: 11px; }
+
+@media (max-width: 560px) {
+  .pdf-toolbar { justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; }
+  .pdf-toolbar .office-toolbar-divider { display: none; }
+  .pdf-canvas { padding: 12px 8px; }
+  .pdf-zoom-label { display: none; }
+  .pdf-search-panel form { flex-wrap: wrap; }
+  .pdf-search-panel form > input { min-width: 160px; }
+  .pdf-welcome { padding: 18px; }
+}

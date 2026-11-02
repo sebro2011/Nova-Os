@@ -4,5 +4,7 @@ import { OFFICE_MIME } from '../core/file-formats/constants';
 export function officeAppForMime(mimeType: string | undefined): AppId | null {
   if (mimeType === OFFICE_MIME.writer) return 'writer';
   if (mimeType === OFFICE_MIME.sheets) return 'sheets';
+  if (mimeType === OFFICE_MIME.slides) return 'slides';
+  if (mimeType === OFFICE_MIME.pdf) return 'pdf';
   return null;
 }
