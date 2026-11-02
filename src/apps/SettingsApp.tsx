@@ -15,15 +15,16 @@ import type { NovaBackup } from '../types';
 import { WallpaperPicker } from '../components/WallpaperPicker';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { createRasterIconDataUrl } from '../lib/image';
+import './SettingsApp.css';
 
 type Tab = 'appearance' | 'system' | 'data' | 'about';
 
 function ToggleRow({ title, description, checked, onChange }: { title: string; description: string; checked: boolean; onChange: () => void }) {
-  return <div className="flex items-center gap-4 py-3"><div className="min-w-0 flex-1"><h4 className="text-xs font-medium text-ink/70">{title}</h4><p className="mt-1 text-[10px] leading-4 text-muted">{description}</p></div><button className={`toggle-switch relative h-6 w-11 shrink-0 rounded-full border transition-colors ${checked ? 'border-[rgba(var(--accent-rgb),0.45)] bg-[rgba(var(--accent-rgb),0.35)]' : 'border-ink/10 bg-ink/[0.06]'}`} role="switch" aria-checked={checked} aria-label={title} onClick={onChange}><span className={`absolute left-[3px] top-[3px] h-4 w-4 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[22px]' : 'translate-x-0'}`} /></button></div>;
+  return <div className="settings-row"><div className="settings-row-copy"><h4 className="settings-row-title">{title}</h4><p className="settings-row-description">{description}</p></div><button className={`toggle-switch relative h-6 w-11 shrink-0 rounded-full border transition-colors ${checked ? 'border-[rgba(var(--accent-rgb),0.45)] bg-[rgba(var(--accent-rgb),0.35)]' : 'border-ink/10 bg-ink/[0.06]'}`} role="switch" aria-checked={checked} aria-label={title} onClick={onChange}><span className={`absolute left-[3px] top-[3px] h-4 w-4 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[22px]' : 'translate-x-0'}`} /></button></div>;
 }
 
 function SettingsCard({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="nova-card p-4"><h3 className="text-xs font-semibold text-ink/75">{title}</h3><div className="mt-2 divide-y divide-ink/[0.05]">{children}</div></section>;
+  return <section className="nova-card settings-card"><h3 className="settings-card-title">{title}</h3><div className="settings-card-body mt-2 divide-y divide-ink/[0.05]">{children}</div></section>;
 }
 
 function SelectRow<T extends string>({ title, description, value, options, onChange }: {
@@ -33,7 +34,7 @@ function SelectRow<T extends string>({ title, description, value, options, onCha
   options: readonly { value: T; label: string }[];
   onChange: (value: T) => void;
 }) {
-  return <div className="flex items-center gap-4 py-3"><div className="min-w-0 flex-1"><h4 className="text-xs font-medium text-ink/70">{title}</h4><p className="mt-1 text-[10px] leading-4 text-muted">{description}</p></div><select className="nova-input w-32 shrink-0 text-[11px]" aria-label={title} value={value} onChange={(event) => onChange(event.target.value as T)}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>;
+  return <div className="settings-row settings-row-select"><div className="settings-row-copy"><h4 className="settings-row-title">{title}</h4><p className="settings-row-description">{description}</p></div><select className="nova-input settings-select" aria-label={title} value={value} onChange={(event) => onChange(event.target.value as T)}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>;
 }
 
 export default function SettingsApp() {
@@ -166,11 +167,11 @@ export default function SettingsApp() {
   ];
 
   return (
-    <div className="flex h-full bg-black/5">
+    <div className="settings-app flex h-full min-w-0 bg-black/5">
       <aside className="hidden w-44 shrink-0 flex-col border-r border-ink/[0.06] bg-black/10 p-3 sm:flex"><p className="eyebrow px-2 py-2">CONTROL DECK</p>{tabs.map(({ id, label, icon: Icon }) => <button key={id} className={`mt-1 flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[11px] transition-colors ${tab === id ? 'bg-[rgba(var(--accent-rgb),0.11)] accent-text' : 'text-muted hover:bg-ink/[0.035]'}`} onClick={() => setTab(id)} aria-pressed={tab === id}><Icon size={15} />{label}</button>)}<div className="mt-auto rounded-xl border border-ink/[0.055] p-3"><ShieldCheck size={16} className="text-emerald-300/55" /><p className="mt-2 text-[10px] font-medium text-ink/65">Local by default</p><p className="mt-1 text-[9px] leading-4 text-muted">No account. No backend. No tracking service.</p></div></aside>
       <div className="app-scroll min-w-0 flex-1 overflow-y-auto">
         <nav className="flex gap-1 overflow-x-auto border-b border-ink/[0.06] p-2 sm:hidden" aria-label="Settings sections">{tabs.map(({ id, label }) => <button key={id} className={`shrink-0 rounded-lg px-3 py-2 text-[10px] ${tab === id ? 'bg-ink/[0.07] text-ink/75' : 'text-muted'}`} onClick={() => setTab(id)} aria-pressed={tab === id}>{label}</button>)}</nav>
-        <div className="mx-auto max-w-2xl p-4 sm:p-6">
+        <div className="settings-content mx-auto w-full max-w-4xl p-4 sm:p-6">
           {storageError && <div className="mb-4 rounded-xl border border-red-300/15 bg-red-300/[0.05] p-3 text-[11px] text-red-200/70" role="alert">{storageError}</div>}
 
           {tab === 'appearance' && <>
@@ -202,7 +203,7 @@ export default function SettingsApp() {
               </SettingsCard>
               <SettingsCard title="Cursor">
                 <SelectRow title="Cursor style" description="Use the system cursor, NOVA’s static cursor, or your uploaded raster cursor." value={preferences.cursorStyle} options={(preferences.customCursor ? [{ value: 'system', label: 'System' }, { value: 'nova', label: 'NOVA' }, { value: 'custom', label: 'Custom' }] : [{ value: 'system', label: 'System' }, { value: 'nova', label: 'NOVA' }]) as readonly { value: typeof preferences.cursorStyle; label: string }[]} onChange={(cursorStyle) => updatePreferences({ cursorStyle })} />
-                <div className="flex items-center gap-3 py-3"><div className="min-w-0 flex-1"><h4 className="text-xs font-medium text-ink/70">Custom raster cursor</h4><p className="mt-1 text-[10px] leading-4 text-muted">PNG or WebP, 512 KB maximum. Re-encoded to a 32 px PNG; SVG is rejected.</p></div>{preferences.customCursor && <img src={preferences.customCursor} alt="Custom cursor preview" className="h-8 w-8 object-contain" />}<button className="nova-button nova-button-secondary h-8 min-h-8 px-2.5 text-[10px]" onClick={() => cursorInputRef.current?.click()} disabled={cursorBusy}>{cursorBusy ? 'Adding…' : 'Upload'}</button><input ref={cursorInputRef} type="file" className="hidden" accept="image/png,image/webp" onChange={(event) => { void uploadCursor(event.target.files?.[0]); event.target.value = ''; }} /></div>
+                <div className="settings-row settings-row-actions"><div className="settings-row-copy"><h4 className="settings-row-title">Custom raster cursor</h4><p className="settings-row-description">PNG or WebP, 512 KB maximum. Re-encoded to a 32 px PNG; SVG is rejected.</p></div><div className="settings-row-control">{preferences.customCursor && <img src={preferences.customCursor} alt="Custom cursor preview" className="h-8 w-8 shrink-0 object-contain" />}<button className="nova-button nova-button-secondary h-8 min-h-8 shrink-0 px-2.5 text-[10px]" onClick={() => cursorInputRef.current?.click()} disabled={cursorBusy}>{cursorBusy ? 'Adding…' : 'Upload'}</button><input ref={cursorInputRef} type="file" className="hidden" accept="image/png,image/webp" onChange={(event) => { void uploadCursor(event.target.files?.[0]); event.target.value = ''; }} /></div></div>
                 {preferences.customCursor && <div className="py-2"><button className="text-[10px] text-muted hover:text-ink/70" onClick={() => updatePreferences({ cursorStyle: 'system', customCursor: null })}>Remove custom cursor</button></div>}
               </SettingsCard>
             </div>

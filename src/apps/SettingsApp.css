@@ -1,0 +1,92 @@
+.settings-app {
+  --settings-control-width: 176px;
+}
+
+.settings-card {
+  padding: 18px 20px;
+}
+
+.settings-card-title {
+  color: rgb(var(--ink-rgb) / 0.78);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.settings-card-body,
+.settings-row,
+.settings-row-copy {
+  min-width: 0;
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px 24px;
+  padding: 14px 0;
+}
+
+.settings-row-title {
+  color: rgb(var(--ink-rgb) / 0.76);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.settings-row-description {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.settings-row .settings-select {
+  width: var(--settings-control-width);
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 34px 8px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.settings-row-control {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 767px) {
+  .settings-card {
+    padding: 16px;
+  }
+
+  .settings-row {
+    column-gap: 16px;
+  }
+
+  .settings-row-select,
+  .settings-row-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-row .settings-select {
+    width: 100%;
+  }
+
+  .settings-row-actions .settings-row-control {
+    justify-content: flex-start;
+  }
+}
+
+@media (pointer: coarse) {
+  .settings-row .settings-select {
+    min-height: 44px;
+  }
+}
