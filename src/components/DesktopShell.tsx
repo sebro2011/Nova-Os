@@ -1,5 +1,5 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Clock3, CloudOff, Expand, FileText, Folder, Globe2, Image, LayoutGrid, NotebookPen, PanelBottom, PanelTop, SquareTerminal, Tags, X } from 'lucide-react';
 import { appRegistry } from '../apps/registry';
 import { LaunchProvider } from '../context/LaunchContext';
@@ -10,10 +10,15 @@ import { useWindowManager } from '../hooks/useWindowManager';
 import { usePhoneLayout } from '../hooks/useMediaQuery';
 import { useWebsiteShortcuts } from '../hooks/useWebsiteShortcuts';
 import { WebsiteIcon } from './WebsiteIcon';
-import { getRecord, initializeDatabase } from '../lib/db';
+import { initializeDatabase } from '../lib/db';
 import { errorMessage } from '../lib/utils';
-import type { AppId, AppLaunchIntent, NovaWindow, WallpaperRecord, WindowBounds, WindowSnapSide } from '../types';
+import type { AppId, AppLaunchIntent, NovaWindow, WindowBounds, WindowSnapSide } from '../types';
+import { BOOT_PREVIEW_EVENT, DESKTOP_REVEAL_MS, hasEnteredDesktopThisSession, markDesktopEntered } from '../lib/boot';
+import { loadWallpaperAsset } from '../lib/wallpaperAsset';
+import { useNovaMotion } from '../hooks/useNovaMotion';
+import { useSystemInitialization } from '../hooks/useSystemInitialization';
 import { BootScreen } from './BootScreen';
+import { BootPreview } from './boot/BootPreview';
 import { DesktopWallpaper } from './DesktopWallpaper';
 import { ContextMenu, type ContextMenuItem } from './ContextMenu';
 import { Dock } from './Dock';
@@ -25,8 +30,10 @@ import { StartMenu } from './StartMenu';
 import { Taskbar } from './Taskbar';
 import { ToastViewport } from './ToastViewport';
 import { WindowFrame } from './WindowFrame';
+import '../styles/desktop-reveal.css';
 
 type PanelName = 'start' | 'search' | 'notifications' | 'tray' | null;
+type RevealState = 'off' | 'playing' | 'done';
 
 const desktopIcons: { appId: AppId; label: string; icon: typeof Folder }[] = [
   { appId: 'files', label: 'Files', icon: Folder },
@@ -60,19 +67,29 @@ const DesktopWindow = memo(function DesktopWindow({ item, mobile, focused, onFoc
 });
 
 export function DesktopShell() {
-  const [entered, setEntered] = useState(false);
+  const { preferences, updatePreferences } = usePreferences();
+  const { reducedMotion, bootAnimation, desktopAnimation, effects, neonGlow } = useNovaMotion();
+  // A reload / bfcache restore / HMR remount in the same tab returns straight to the
+  // desktop instead of putting a boot screen over already-running applications.
+  const [sessionBooted] = useState(hasEnteredDesktopThisSession);
+  const [entered, setEntered] = useState(sessionBooted);
+  const [reveal, setReveal] = useState<RevealState>(() => sessionBooted ? (desktopAnimation ? 'playing' : 'done') : 'off');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const initialization = useSystemInitialization({
+    wallpaperId: preferences.wallpaper === 'custom' ? preferences.customWallpaperId : null,
+  });
   const [panel, setPanel] = useState<PanelName>(null);
   const [contextMenu, setContextMenu] = useState<{ kind: 'desktop' | 'taskbar'; x: number; y: number } | null>(null);
   const [storageWarning, setStorageWarning] = useState('');
   const [customWallpaperUrl, setCustomWallpaperUrl] = useState('');
   const workspaceRef = useRef<HTMLDivElement>(null);
   const storageAttempted = useRef(false);
-  const { preferences, updatePreferences } = usePreferences();
   const preferencesRef = useRef(preferences);
   preferencesRef.current = preferences;
   const { notify } = useNotifications();
   const isPhone = usePhoneLayout();
-  const { websites } = useWebsiteShortcuts(entered);
+  // Website shortcuts load during boot so desktop icons are ready at first paint.
+  const { websites } = useWebsiteShortcuts(true);
   const taskbarAtBottom = preferences.taskbarPosition === 'bottom' && !isPhone;
   const {
     windows, activeWindow, openApp: showApp, closeWindow, closeActiveWindow,
@@ -99,44 +116,69 @@ export function DesktopShell() {
     return intent;
   }, [launchIntents]);
 
-  const finishBoot = useCallback(() => setEntered(true), []);
+  const finishBoot = useCallback(() => {
+    markDesktopEntered();
+    setEntered(true);
+    setReveal(desktopAnimation ? 'playing' : 'done');
+  }, [desktopAnimation]);
   const togglePanel = useCallback((name: Exclude<PanelName, null>) => {
     setPanel((current) => current === name ? null : name);
   }, []);
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
+  // The reveal attribute is removed after the last animation ends (or by this fallback),
+  // so no element is ever left in an animated starting state.
+  useEffect(() => {
+    if (reveal !== 'playing') return;
+    const timer = window.setTimeout(() => setReveal('done'), DESKTOP_REVEAL_MS);
+    return () => window.clearTimeout(timer);
+  }, [reveal]);
+
+  // Previews are explicit user actions and are dismissed on SPA/back-forward navigation
+  // and bfcache restores. Real boot screens are never re-triggered once entered is true.
+  useEffect(() => {
+    const openPreview = () => { if (entered) setPreviewOpen(true); };
+    const closeOnNavigation = () => setPreviewOpen(false);
+    window.addEventListener(BOOT_PREVIEW_EVENT, openPreview);
+    window.addEventListener('popstate', closeOnNavigation);
+    window.addEventListener('pageshow', closeOnNavigation);
+    return () => {
+      window.removeEventListener(BOOT_PREVIEW_EVENT, openPreview);
+      window.removeEventListener('popstate', closeOnNavigation);
+      window.removeEventListener('pageshow', closeOnNavigation);
+    };
+  }, [entered]);
+
   useEffect(() => {
     if (!entered || storageAttempted.current) return;
     storageAttempted.current = true;
+    // The boot pass already opened and seeded IndexedDB. Only that path's error
+    // reporting is repeated here; a clean run does not initialize twice.
+    if (initialization.status === 'ready' && initialization.errors.length === 0) return;
     initializeDatabase().catch((error) => {
       const message = errorMessage(error);
       setStorageWarning(message);
       notify({ title: 'Local storage needs attention', message, tone: 'error' });
     });
-  }, [entered, notify]);
+  }, [entered, notify, initialization.status, initialization.errors.length]);
 
   useEffect(() => {
     let active = true;
-    let objectUrl = '';
-    if (preferences.wallpaper !== 'custom' || !preferences.customWallpaperId) {
+    const customId = preferences.wallpaper === 'custom' ? preferences.customWallpaperId : null;
+    if (!customId) {
       setCustomWallpaperUrl('');
       return;
     }
-    getRecord<WallpaperRecord>('wallpapers', preferences.customWallpaperId).then((record) => {
-      if (!record?.blob) throw new Error('The selected custom wallpaper is no longer available. Choose another wallpaper in Settings.');
-      objectUrl = URL.createObjectURL(record.blob);
-      if (active) setCustomWallpaperUrl(objectUrl);
-      else URL.revokeObjectURL(objectUrl);
+    // Shares the boot initializer's cached blob URL: one IndexedDB read, no double decode.
+    loadWallpaperAsset(customId).then((url) => {
+      if (active) setCustomWallpaperUrl(url);
     }).catch((error) => {
       if (!active) return;
       setCustomWallpaperUrl('');
       updatePreferences({ wallpaper: 'aurora', customWallpaperId: null });
       notify({ title: 'Custom wallpaper unavailable', message: `${errorMessage(error)} NOVA switched to Aurora without changing your other data.`, tone: 'warning' });
     });
-    return () => {
-      active = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
+    return () => { active = false; };
   }, [preferences.wallpaper, preferences.customWallpaperId, notify, updatePreferences]);
 
   useEffect(() => {
@@ -226,20 +268,19 @@ export function DesktopShell() {
     onOpenMenu={(x, y) => { setPanel(null); setContextMenu({ kind: 'taskbar', x, y }); }}
   />;
 
-  if (!entered) {
-    return <div className="nova-root h-full" data-color-mode={preferences.colorMode} data-theme={preferences.theme} data-accent={preferences.accent} data-wallpaper={preferences.wallpaper} data-reduced-motion={preferences.reduceMotion} data-performance={preferences.performanceMode} data-contrast={preferences.highContrast ? 'high' : 'standard'}><BootScreen onComplete={finishBoot} wallpaperUrl={customWallpaperUrl} /></div>;
-  }
-
   return (
     <LaunchProvider value={launchValue}>
       <WindowManagerProvider value={windowControlsValue}>
-        <main
-        className="nova-root desktop-enter relative flex h-full flex-col overflow-hidden"
+        <div className="nova-session relative h-full">
+        {entered && <main
+        className="nova-root relative flex h-full flex-col overflow-hidden"
         data-color-mode={preferences.colorMode}
         data-theme={preferences.theme}
         data-accent={preferences.accent}
         data-wallpaper={preferences.wallpaper}
-        data-reduced-motion={preferences.reduceMotion}
+        data-reduced-motion={reducedMotion}
+        data-neon={neonGlow}
+        data-desktop-reveal={reveal}
         data-performance={preferences.performanceMode}
         data-contrast={preferences.highContrast ? 'high' : 'standard'}
         data-compact={preferences.compactMode}
@@ -282,10 +323,11 @@ export function DesktopShell() {
           }}
         >
           <div className={`app-scroll max-h-full overflow-y-auto ${isPhone ? 'phone-desktop-icons absolute inset-x-2 top-3 grid grid-cols-3 gap-1' : preferences.desktopLayout === 'grid' ? 'absolute left-3 top-4 grid grid-cols-3 gap-1 sm:left-5 sm:top-6' : 'absolute left-3 top-4 grid grid-cols-1 gap-1 sm:left-5 sm:top-6'}`}>
-            {desktopIcons.filter(({ appId }) => !preferences.removedApps.includes(appId)).map(({ appId, label, icon: Icon }) => (
+            {desktopIcons.filter(({ appId }) => !preferences.removedApps.includes(appId)).map(({ appId, label, icon: Icon }, index) => (
               <button
                 key={appId}
                 className="desktop-icon"
+                style={{ '--reveal-delay': `${Math.min(index, 8) * 55}ms` } as CSSProperties}
                 onClick={(event) => openFromDesktop(event, appId)}
                 onDoubleClick={() => openApp(appId)}
                 aria-label={`Open ${label}`}
@@ -295,10 +337,11 @@ export function DesktopShell() {
                 <span className="desktop-icon-label">{label}</span>
               </button>
             ))}
-            {websites.filter((website) => website.showOnDesktop).map((website) => (
+            {websites.filter((website) => website.showOnDesktop).map((website, index) => (
               <button
                 key={website.id}
                 className="desktop-icon"
+                style={{ '--reveal-delay': `${Math.min(desktopIcons.length + index, 8) * 55}ms` } as CSSProperties}
                 onClick={(event) => openWebsiteFromDesktop(event, website.url)}
                 onDoubleClick={() => openApp('browser', { url: website.url })}
                 aria-label={`Open ${website.name}`}
@@ -311,7 +354,7 @@ export function DesktopShell() {
           </div>
 
           {windows.length === 0 && (
-            <section className="pointer-events-none absolute bottom-7 right-6 hidden max-w-xs text-right md:block">
+            <section className="desktop-hint pointer-events-none absolute bottom-7 right-6 hidden max-w-xs text-right md:block">
               <p className="eyebrow">YOUR LOCAL UNIVERSE</p>
               <h1 className="mt-2 text-2xl font-light tracking-tight text-ink/75">Beyond Earth.<br /><span className="font-semibold text-ink/90">Beyond Limits.</span></h1>
               <p className="mt-3 text-[11px] leading-5 text-muted">Double-click a desktop icon or press <span className="text-ink/65">Ctrl + K</span> to begin.</p>
@@ -354,7 +397,45 @@ export function DesktopShell() {
         {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} label={contextMenu.kind === 'desktop' ? 'Desktop actions' : 'Taskbar actions'} items={contextMenu.kind === 'desktop' ? desktopMenuItems : taskbarMenuItems} onClose={closeContextMenu} />}
         <ToastViewport />
         <PwaManager />
-        </main>
+        </main>}
+
+        {/* Boot stays cosmic dark even in light mode, but keeps the user's accent and
+            motion decisions. It crossfades out as the desktop reveal begins underneath. */}
+        <AnimatePresence initial={false}>
+          {!entered && (
+            <motion.div
+              key="nova-boot"
+              className="nova-root nova-boot-layer h-full"
+              data-theme={preferences.theme}
+              data-accent={preferences.accent}
+              data-wallpaper={preferences.wallpaper}
+              data-reduced-motion={reducedMotion}
+              data-neon={neonGlow}
+              data-performance={preferences.performanceMode}
+              data-contrast={preferences.highContrast ? 'high' : 'standard'}
+              initial={false}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: bootAnimation ? 0.45 : 0, ease: 'easeOut' }}
+            >
+              <BootScreen onComplete={finishBoot} sequence={initialization} wallpaperUrl={customWallpaperUrl} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {entered && previewOpen && (
+          /* An explicit preview still animates when the startup switch is off;
+             only reduced motion forces the static frame. */
+          <BootPreview
+            onClose={() => setPreviewOpen(false)}
+            animated={!reducedMotion}
+            effects={effects}
+            neon={neonGlow}
+            accent={preferences.accent}
+            wallpaperUrl={customWallpaperUrl}
+          />
+        )}
+        </div>
       </WindowManagerProvider>
     </LaunchProvider>
   );

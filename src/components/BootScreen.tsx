@@ -1,18 +1,29 @@
-import { useEffect, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { ArrowRight, Database, ShieldCheck, Sparkles } from 'lucide-react';
 import { NovaLogo } from './NovaLogo';
-import { DesktopWallpaper } from './DesktopWallpaper';
+import { BootBackdrop, BootSequencePanel } from './boot/BootAnimation';
 import { WELCOME_KEY } from '../lib/preferences';
-import { usePreferences } from '../context/PreferencesContext';
 import { playStartupSound } from '../lib/startupSound';
+import { useNovaMotion } from '../hooks/useNovaMotion';
+import { BOOT_ANIMATION_FALLBACK_MS } from '../lib/boot';
+import type { InitializationState } from '../lib/systemInitialization';
 
-export function BootScreen({ onComplete, wallpaperUrl }: { onComplete: () => void; wallpaperUrl?: string }) {
-  const systemReducedMotion = useReducedMotion();
-  const { preferences } = usePreferences();
-  const reducedMotion = systemReducedMotion || preferences.reduceMotion;
-  const animated = preferences.startupAnimation && !reducedMotion;
-  const soundPlayed = useRef(false);
+/** Used when the boot screen is rendered without the shell (tests, story-style previews). */
+const READY_SEQUENCE: InitializationState = {
+  status: 'ready', stageIndex: 3, progress: 1, errors: [], timedOut: false,
+};
+
+interface BootScreenProps {
+  onComplete: () => void;
+  wallpaperUrl?: string;
+  /** Real initialization state from the shell; boot never completes while it is initializing. */
+  sequence?: InitializationState;
+}
+
+export function BootScreen({ onComplete, wallpaperUrl, sequence = READY_SEQUENCE }: BootScreenProps) {
+  const { preferences, bootAnimation, effects, neonGlow } = useNovaMotion();
+  const animated = bootAnimation;
   const [firstVisit] = useState(() => {
     try {
       return localStorage.getItem(WELCOME_KEY) !== '1';
@@ -21,67 +32,90 @@ export function BootScreen({ onComplete, wallpaperUrl }: { onComplete: () => voi
     }
   });
   const [phase, setPhase] = useState<'boot' | 'welcome'>(() => firstVisit && !animated ? 'welcome' : 'boot');
+  const [revealComplete, setRevealComplete] = useState(!animated);
+  const [progressSettled, setProgressSettled] = useState(!animated);
+  const soundPlayed = useRef(false);
+  const bootFinished = useRef(false);
+  const entered = useRef(false);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      if (firstVisit) setPhase('welcome');
-      else onComplete();
-    }, animated ? 1_200 : 0);
-    return () => window.clearTimeout(timer);
-  }, [animated, firstVisit, onComplete]);
-
-  const playSound = () => {
+  const playSound = useCallback(() => {
     if (!preferences.startupSound || soundPlayed.current) return;
     soundPlayed.current = true;
     void playStartupSound();
-  };
+  }, [preferences.startupSound]);
 
-  const skipStartup = () => {
-    playSound();
-    if (firstVisit) setPhase('welcome');
-    else onComplete();
-  };
-
-  const enterDesktop = () => {
+  const enterDesktop = useCallback(() => {
     playSound();
     try {
       localStorage.setItem(WELCOME_KEY, '1');
     } catch {
       // The desktop still works when LocalStorage is blocked; preferences may not persist.
     }
+    if (entered.current) return;
+    entered.current = true;
     onComplete();
-  };
+  }, [playSound, onComplete]);
+
+  const completeBoot = useCallback(() => {
+    if (bootFinished.current) return;
+    bootFinished.current = true;
+    if (firstVisit) setPhase('welcome');
+    else enterDesktop();
+  }, [firstVisit, enterDesktop]);
+
+  const skipStartup = useCallback(() => {
+    playSound();
+    completeBoot();
+  }, [playSound, completeBoot]);
+
+  // The logo reveal and progress settle are real animation completions. These timers
+  // are only safety nets for browsers that never deliver the animation callbacks.
+  useEffect(() => {
+    if (!animated) return;
+    const timer = window.setTimeout(() => setRevealComplete(true), BOOT_ANIMATION_FALLBACK_MS);
+    return () => window.clearTimeout(timer);
+  }, [animated]);
+
+  useEffect(() => {
+    if (!animated || sequence.progress < 1) return;
+    // Never let a missing animation callback keep the desktop behind a full progress bar.
+    const timer = window.setTimeout(() => setProgressSettled(true), 700);
+    return () => window.clearTimeout(timer);
+  }, [animated, sequence.progress]);
+
+  const systemReady = sequence.status !== 'initializing' && revealComplete && progressSettled;
+
+  useEffect(() => {
+    if (phase !== 'boot') return;
+    // Disabled animation / reduced motion: enter immediately, without any loading wait.
+    if (!animated || systemReady) completeBoot();
+  }, [phase, animated, systemReady, completeBoot]);
+
+  // Escape always offers a way out of a slow or broken initialization.
+  useEffect(() => {
+    if (phase !== 'boot' || !animated) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') skipStartup();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [phase, animated, skipStartup]);
+
+  const markReveal = useCallback(() => setRevealComplete(true), []);
+  const markProgress = useCallback(() => setProgressSettled(true), []);
 
   return (
-    <main className="boot-screen app-scroll relative flex h-full min-h-full items-center justify-center overflow-y-auto p-5" onPointerDown={playSound}>
-      <DesktopWallpaper imageUrl={wallpaperUrl} />
+    <main className="nova-boot boot-screen" data-boot-phase={phase} data-neon={neonGlow} onPointerDown={playSound}>
+      <BootBackdrop effects={effects && animated} wallpaperUrl={wallpaperUrl} />
       {phase === 'boot' ? (
-        <motion.section
-          className="relative z-10 my-auto flex w-full max-w-sm flex-col items-center text-center"
-          initial={animated ? { opacity: 0 } : false}
-          animate={{ opacity: 1 }}
-          aria-label="NOVA is starting"
-        >
-          <motion.div
-            initial={animated ? { opacity: 0, scale: 0.82, rotate: -8 } : false}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            transition={{ duration: animated ? 0.55 : 0, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <NovaLogo size="xl" />
-          </motion.div>
-          <h1 className="mt-7 text-xl font-semibold tracking-[0.3em] text-ink">NOVA</h1>
-          <p className="mt-2 text-[10px] font-medium tracking-[0.22em] text-muted">BEYOND EARTH. BEYOND LIMITS.</p>
-          <div className="mt-9 h-0.5 w-48 overflow-hidden rounded-full bg-ink/10">
-            <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-nova-cyan via-nova-blue to-nova-violet"
-              initial={{ width: '0%' }}
-              animate={{ width: '100%' }}
-              transition={{ duration: animated ? 1 : 0, ease: 'easeInOut' }}
-            />
-          </div>
-          <p className="mt-4 text-xs text-ink/65">Preparing your local universe…</p>
-          <button className="mt-8 text-xs text-muted transition-colors hover:text-ink/70" onClick={skipStartup}>Skip startup</button>
-        </motion.section>
+        <BootSequencePanel
+          state={sequence}
+          animated={animated}
+          effects={effects && animated}
+          onRevealComplete={markReveal}
+          onProgressComplete={markProgress}
+          onSkip={skipStartup}
+        />
       ) : (
         <motion.section
           className="glass-panel relative z-10 my-auto w-full max-w-xl overflow-hidden p-7 sm:p-10"

@@ -47,6 +47,22 @@ describe('preference migration and validation', () => {
     expect(sanitizePreferences({ windowRadius: 'unbounded', taskbarPosition: 'left' })).toMatchObject({ windowRadius: 'medium', taskbarPosition: 'top' });
   });
 
+  it('migrates the desktop animation switch with safe defaults', () => {
+    expect(sanitizePreferences({ theme: 'cosmic' }).desktopAnimation).toBe(true);
+    expect(defaultPreferences.desktopAnimation).toBe(true);
+    expect(sanitizePreferences({ desktopAnimation: false }).desktopAnimation).toBe(false);
+    expect(sanitizePreferences({ desktopAnimation: 'false' }).desktopAnimation).toBe(true);
+    expect(sanitizePreferences({ startupAnimation: false, desktopAnimation: true })).toMatchObject({ startupAnimation: false, desktopAnimation: true });
+  });
+
+  it('migrates the neon glow visual-style switch with safe defaults', () => {
+    expect(defaultPreferences.neonGlow).toBe(true);
+    expect(sanitizePreferences({ theme: 'cosmic' }).neonGlow).toBe(true);
+    expect(sanitizePreferences({ neonGlow: false }).neonGlow).toBe(false);
+    expect(sanitizePreferences({ neonGlow: 'true' }).neonGlow).toBe(true);
+    expect(sanitizePreferences({ neonGlow: false, accent: 'cyan', theme: 'nebula' })).toMatchObject({ neonGlow: false, accent: 'cyan', theme: 'nebula' });
+  });
+
   it('keeps recovery and web apps available when removed-app preferences are migrated', () => {
     expect(sanitizePreferences({ removedApps: ['settings', 'app-center', 'browser', 'task-manager', 'notes'] }).removedApps).toEqual(['notes']);
   });

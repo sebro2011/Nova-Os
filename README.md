@@ -8,8 +8,8 @@ A lightweight, responsive, local-first desktop environment that runs entirely in
 
 ## Features
 
-- Fast animated boot and first-run welcome with optional sound/animation controls and reduced-motion support
-- Cosmic Dark and bright light modes with Liquid Glass-inspired surfaces, three themes, three accents, built-in/custom wallpapers with previews, adjustable window materials/radius, and system/NOVA/custom raster cursors
+- Cinematic, initialization-driven boot and staggered desktop reveal with boot/desktop animation switches, a safe-mode fallback, first-run welcome, optional sound, and reduced-motion support
+- Cosmic Dark and bright light modes with Liquid Glass-inspired surfaces, three themes, three accents, built-in/custom wallpapers with previews, adjustable window materials/radius, an optional whole-app **Neon glow** visual layer, and system/NOVA/custom raster cursors
 - Desktop icons, validated website shortcuts, app launcher, dock, taskbar, system tray, optional clock, quick settings, notification center, and supported desktop/taskbar context menus
 - Multi-window manager with focus, drag, eight-direction resize, reversible left/right snapping, state-preserving minimize, maximize/restore, and close
 - **Mobile phone layout:** edge-to-edge app windows, portrait/landscape adaptation, safe-area support, larger touch controls, mobile browser menus, and touch-friendly Files navigation
@@ -24,7 +24,7 @@ A lightweight, responsive, local-first desktop environment that runs entirely in
 - **Media Player:** local audio/video playback with a session-only queue
 - **App Center:** Discover, NOVA Apps, Installed, Library, and Add Website sections; non-destructive built-in removal/restore, dock pins, search/categories/status, and validated website name/URL/icon/desktop management without executable installation
 - **Task Manager:** real running/active/minimized NOVA windows with focus, restore, minimize, and guarded close actions; no fabricated CPU/RAM/GPU telemetry
-- **Settings:** startup, light/dark mode, themes, custom locally stored wallpapers, window glass/transparency/radius, desktop labels/icons/layout, taskbar clock/size/material/position, cursors, high contrast, reduced motion, compact controls, opaque performance mode, browser storage estimates, and data controls
+- **Settings:** startup (boot animation, desktop animation, boot animation preview, startup sound), light/dark mode, themes, **Neon glow** visual style (on by default, switchable in Appearance → Visual style), custom locally stored wallpapers, window glass/transparency/radius, desktop labels/icons/layout, taskbar clock/size/material/position, cursors, high contrast, reduced motion, compact controls, opaque performance mode, browser storage estimates, and data controls
 - Validated JSON backup import with preview/confirmation and full JSON export, including optional version 1 website shortcuts
 - Keyboard shortcuts, Help Center, responsive layouts, reduced-motion support, and storage error states
 
@@ -94,7 +94,7 @@ Nova-Os/
 │   │   ├── AppCenterApp.tsx
 │   │   ├── TaskManagerApp.tsx
 │   │   └── HelpApp.tsx
-│   ├── components/           # Boot screen, shell, windows, dock, menus, search
+│   ├── components/           # Boot screen/visuals, shell, windows, dock, menus, search
 │   ├── context/              # Preferences, notifications, launching, window controls
 │   ├── hooks/                # Window-manager state and viewport fitting
 │   ├── lib/                  # IndexedDB, validation, parsers, utilities, tests
@@ -196,10 +196,12 @@ No application is automatically secure against malicious browser extensions, a c
 
 - App windows are lazy-loaded into separate chunks
 - Static CSS wallpapers avoid continuous canvas/WebGL work
-- Framer Motion is limited to short shell transitions
+- Framer Motion is limited to short shell, boot logo, progress and crossfade transitions; particles and desktop reveal use GPU-friendly CSS transforms/opacity with no canvas or RAF loop
+- Boot progress follows real work (IndexedDB, shortcuts, wallpaper, first paint) with a 3.5 s watchdog; refresh/returning sessions skip the boot layer so it never covers running apps
 - Performance mode uses opaque shell/window surfaces and disables backdrop blur
 - Individual desktop windows are memoized so drag/resize updates do not re-render unrelated apps; live window subscriptions are isolated to Task Manager and global search defers expensive filtering
-- Startup and shell motion respect both the operating system preference and NOVA settings; optional startup sound is gesture-gated and off by default
+- Boot, desktop reveal, and shell motion respect both the operating system preference and NOVA settings; disabled animations enter the desktop with no loading wait; optional startup sound is gesture-gated and off by default
+- Neon glow is a CSS-only layer driven by `data-neon` and shared design tokens; it adds no dependencies, network requests or timers, and is disabled under performance mode / high contrast / reduced motion
 - Context menus, media object URLs, animation timers, and global event listeners have explicit cleanup
 - Optional high contrast strengthens text, borders, focus indicators, and surface opacity; its sanitized preference remains compatible with version 1 backups
 - Semantic controls, visible focus indicators, labels, keyboard navigation, and status announcements are included
@@ -211,15 +213,16 @@ For the target Windows 10 PC (Intel Core i5-3330, 8 GB RAM, GTX 960 2 GB), use a
 
 ## Verification
 
-Executed for the current implementation. The module audit, file map, review evidence, and deployment checklist are in [`docs/major-upgrade-review.md`](docs/major-upgrade-review.md):
+Executed for the current implementation. The original module audit, file map, review evidence, and deployment checklist are in [`docs/major-upgrade-review.md`](docs/major-upgrade-review.md); the boot/desktop animation audit and design are in [`docs/boot-and-desktop-animation.md`](docs/boot-and-desktop-animation.md):
 
 - `npm run typecheck` — passed
-- `npm test` — **24 test files, 88 tests passed** (including startup/reduced-motion behavior, reversible window snapping, minimized-app state preservation, real Task Manager states/actions, accessible context menus and search, notification clock preferences, Browser stop/reload and website launch intents, external navigation, fullscreen/offline handling, embedding policies, Notes autosave races, Files close guards, IndexedDB v3 website persistence and legacy restore preservation, modal focus, Dock limits, App Center management, Media object URLs, YouTube adaptation, responsive windows, preference migration, website validation, and version 1 backup compatibility)
-- `npm run build` — passed; static output generated successfully
+- `npm test` — **53 test files, 185 tests passed** (including the new boot/desktop lifecycle, real initialization/watchdog, preference migration, wallpaper cache, neon visual-style toggle and preview tests, plus startup/reduced-motion behavior, reversible window snapping, minimized-app state preservation, real Task Manager states/actions, accessible context menus and search, notification clock preferences, Browser stop/reload and website launch intents, external navigation, fullscreen/offline handling, embedding policies, Notes autosave races, Files close guards, IndexedDB v3 website persistence and legacy restore preservation, modal focus, Dock limits, App Center management, Media object URLs, YouTube adaptation, responsive windows, website validation, and version 1 backup compatibility)
+- `npm run build` — passed; static output generated. Vite still reports the pre-existing large lazy Writer/PDF chunks (unrelated to startup)
 - `npm run test:pwa` — manifest, real PNG dimensions, maskable assets, worker boundaries, update-cache headers, and production artifacts validated
-- Production preview HTTP smoke — app, SPA fallback, manifest, worker, and icons returned 200; `node --check public/sw.js` passed
-- `npm audit` — **0 dependency vulnerabilities reported** with the current lockfile
-- Source scan — no dangerous HTML injection, `eval`, `Function` constructor, or shell-execution APIs in application source
+- Production preview HTTP smoke — app, SPA fallback, manifest, worker, and icons returned 200; `node --check public/sw.js` passed; boot and reveal CSS are present in the production bundle
+- `git diff --check` — passed
+- `npm audit --audit-level=high` — 0 vulnerabilities in the current lockfile
+- Source scan — the upgrade added no network requests, tracking, `eval`, `Function` constructor, or shell-execution APIs; pre-existing `innerHTML` use remains confined to the sanitized Writer import/print paths
 
 These results describe the checks actually run in the implementation environment, not a guarantee for every browser or device. Run the commands again after changes. No local browser executable was available for this implementation pass, so real-browser visual, screen-reader, install prompt, and offline-device behavior were not claimed as tested.
 
