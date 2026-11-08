@@ -1,0 +1,346 @@
+/* NOVA "Neon glow" visual layer.
+   Opt-in through data-neon="true" (Settings -> Appearance -> Visual style).
+   It only overrides shared design tokens and reusable component classes, so every
+   app, window and dialog inherits the same look without any logic changes. */
+
+.nova-root[data-neon='true'] {
+  --neon-border: rgba(var(--accent-rgb), 0.34);
+  --neon-border-soft: rgba(var(--accent-rgb), 0.18);
+  --neon-glow: 0 0 18px rgba(var(--accent-rgb), 0.26);
+  --neon-glow-strong: 0 0 28px rgba(var(--accent-rgb), 0.36), 0 0 70px rgba(139, 92, 246, 0.18);
+}
+
+/* Deeper cosmic base. Theme and accent choices continue to win through their own vars. */
+.nova-root[data-neon='true']:not([data-color-mode='light']) {
+  --page: #050713;
+  --app-bg: #090d1c;
+  --editor-bg: rgba(8, 12, 26, 0.985);
+  --glass: rgba(12, 17, 36, 0.72);
+  --glass-strong: rgba(10, 14, 30, 0.94);
+  --glass-rgb: 12 17 36;
+  --window-rgb: 11 16 33;
+  --shell-bg: rgba(8, 11, 26, 0.72);
+  --performance-bg: #0b1020;
+  --line: rgba(var(--accent-rgb), 0.2);
+  --glass-highlight: rgba(var(--accent-rgb), 0.16);
+  --window-shadow: 0 30px 90px rgba(0, 0, 0, 0.6), 0 0 50px rgba(var(--accent-rgb), 0.12);
+  --muted: #aeb9d6;
+}
+
+.nova-root[data-neon='true'][data-theme='midnight']:not([data-color-mode='light']) {
+  --page: #03050c;
+  --glass-rgb: 6 10 20;
+  --window-rgb: 6 10 20;
+  --shell-bg: rgba(4, 7, 16, 0.76);
+  --performance-bg: #070b16;
+}
+
+.nova-root[data-neon='true'][data-theme='nebula']:not([data-color-mode='light']) {
+  --page: #0b0619;
+  --glass-rgb: 22 12 40;
+  --window-rgb: 20 11 36;
+  --shell-bg: rgba(18, 9, 34, 0.74);
+  --performance-bg: #160b2a;
+}
+
+/* Light mode keeps its readable surfaces and gets a restrained neon accent. */
+.nova-root[data-neon='true'][data-color-mode='light'] {
+  --line: rgba(var(--accent-rgb), 0.22);
+  --glass-highlight: rgba(255, 255, 255, 0.9);
+  --muted: #4d5870;
+  --neon-glow: 0 0 14px rgba(var(--accent-rgb), 0.16);
+  --neon-glow-strong: 0 0 22px rgba(var(--accent-rgb), 0.2);
+}
+
+/* Desktop wallpaper: static gradients + one slow compositor-only drift. */
+.nova-wallpaper-neon { display: none; }
+
+.nova-root[data-neon='true'] .nova-wallpaper-neon {
+  display: block;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 16% 18%, rgba(var(--accent-rgb), 0.18), transparent 48%),
+    radial-gradient(ellipse at 84% 82%, rgba(167, 139, 250, 0.16), transparent 50%),
+    radial-gradient(ellipse at 52% 110%, rgba(85, 230, 224, 0.08), transparent 55%);
+}
+
+.nova-root[data-neon='true'] .nova-wallpaper-neon::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background: conic-gradient(
+    from 210deg at 50% 50%,
+    transparent 0deg, rgba(var(--accent-rgb), 0.07) 40deg, transparent 90deg,
+    rgba(167, 139, 250, 0.06) 220deg, transparent 300deg
+  );
+  opacity: 0.55;
+  will-change: transform, opacity;
+  animation: neon-drift 26s ease-in-out infinite alternate;
+}
+
+.nova-root[data-neon='true'] .nova-wallpaper-neon::after {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 16%;
+  height: 1px;
+  opacity: 0.55;
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.5), rgba(167, 139, 250, 0.4), transparent);
+  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.45);
+}
+
+@keyframes neon-drift {
+  0%, 100% { transform: translate3d(-2%, -1%, 0) scale(1.02); opacity: 0.45; }
+  50% { transform: translate3d(2%, 1%, 0) scale(1.06); opacity: 0.72; }
+}
+
+.nova-root[data-neon='true'][data-color-mode='light'] .nova-wallpaper-neon { opacity: 0.35; }
+
+/* Shared surfaces ---------------------------------------------------------- */
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .glass-panel {
+  border-color: rgba(var(--accent-rgb), 0.3);
+  background: linear-gradient(140deg, rgba(var(--accent-rgb), 0.09), transparent 46%), rgb(var(--glass-rgb) / var(--glass-alpha));
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.5), 0 0 32px rgba(var(--accent-rgb), 0.12), inset 0 1px 0 rgba(var(--accent-rgb), 0.18);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .glass-subtle {
+  border-color: rgba(var(--accent-rgb), 0.2);
+  background: rgba(var(--accent-rgb), 0.055);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .nova-card {
+  border-color: rgba(var(--accent-rgb), 0.18);
+  background: linear-gradient(145deg, rgba(var(--accent-rgb), 0.06), rgba(255, 255, 255, 0.02));
+  box-shadow: inset 0 1px 0 rgba(var(--accent-rgb), 0.1);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .nova-card:hover {
+  border-color: rgba(var(--accent-rgb), 0.4);
+  box-shadow: 0 0 22px rgba(var(--accent-rgb), 0.14), inset 0 1px 0 rgba(var(--accent-rgb), 0.16);
+}
+
+/* Buttons, controls, focus ------------------------------------------------- */
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .nova-button {
+  border-color: rgba(var(--accent-rgb), 0.6);
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.48), rgba(167, 139, 250, 0.28));
+  box-shadow: 0 0 22px rgba(var(--accent-rgb), 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .nova-button:hover:not(:disabled) {
+  border-color: rgba(var(--accent-rgb), 0.85);
+  box-shadow: 0 0 32px rgba(var(--accent-rgb), 0.44), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .nova-button-secondary {
+  border-color: rgba(var(--accent-rgb), 0.3);
+  background: rgba(var(--accent-rgb), 0.08);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .nova-button:disabled {
+  border-color: rgba(var(--accent-rgb), 0.18);
+  box-shadow: none;
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .nova-button-danger {
+  border-color: rgba(248, 113, 113, 0.42);
+  color: #ffe2e2;
+  background: rgba(248, 113, 113, 0.14);
+  box-shadow: 0 0 18px rgba(248, 113, 113, 0.2);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .icon-button:hover:not(:disabled),
+.nova-root[data-neon='true']:not([data-color-mode='light']) .icon-button[aria-expanded='true'],
+.nova-root[data-neon='true']:not([data-color-mode='light']) .icon-button[data-active='true'] {
+  color: #fff;
+  border-color: rgba(var(--accent-rgb), 0.4);
+  background: rgba(var(--accent-rgb), 0.14);
+  box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.22);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .nova-input {
+  border-color: rgba(var(--accent-rgb), 0.22);
+  background: rgba(4, 7, 18, 0.6);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .nova-input:focus {
+  border-color: rgba(var(--accent-rgb), 0.75);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16), 0 0 22px rgba(var(--accent-rgb), 0.22);
+}
+
+.nova-root[data-neon='true'] :is(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.28), 0 0 18px rgba(var(--accent-rgb), 0.26);
+}
+
+.nova-root[data-neon='true'] .toggle-switch[aria-checked='true'] {
+  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.34);
+}
+
+/* Accents, logo, typography ------------------------------------------------ */
+
+.nova-root[data-neon='true'] .eyebrow { text-shadow: 0 0 14px rgba(var(--accent-rgb), 0.45); }
+.nova-root[data-neon='true'] .accent-text { text-shadow: 0 0 14px rgba(var(--accent-rgb), 0.55); }
+
+.nova-root[data-neon='true'] .accent-surface {
+  border-color: rgba(var(--accent-rgb), 0.38);
+  background: rgba(var(--accent-rgb), 0.14);
+  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.18), inset 0 0 12px rgba(var(--accent-rgb), 0.08);
+}
+
+.nova-root[data-neon='true'] .nova-logo-mark {
+  border-color: rgba(var(--accent-rgb), 0.6);
+  background: linear-gradient(145deg, rgba(var(--accent-rgb), 0.5), rgba(167, 139, 250, 0.28));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 0 26px rgba(var(--accent-rgb), 0.5), 0 0 60px rgba(139, 92, 246, 0.28);
+}
+
+/* Windows, taskbar, dock, desktop icons ------------------------------------ */
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .window-frame {
+  border-color: rgba(var(--accent-rgb), 0.3);
+  box-shadow: var(--window-shadow), 0 0 28px rgba(var(--accent-rgb), 0.1), inset 0 1px 0 rgba(var(--accent-rgb), 0.16);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .window-frame[data-focused='true'] {
+  border-color: rgba(var(--accent-rgb), 0.58);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6), 0 0 42px rgba(var(--accent-rgb), 0.22), inset 0 1px 0 rgba(var(--accent-rgb), 0.2);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .window-frame[data-focused='false'] {
+  border-color: rgba(var(--accent-rgb), 0.12);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.38);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .window-titlebar {
+  background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.12), transparent);
+  box-shadow: inset 0 -1px 0 rgba(var(--accent-rgb), 0.16);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .desktop-topbar,
+.nova-root[data-neon='true']:not([data-color-mode='light']) .desktop-dock {
+  border-color: rgba(var(--accent-rgb), 0.28);
+  box-shadow: inset 0 1px 0 rgba(var(--accent-rgb), 0.2), 0 0 24px rgba(var(--accent-rgb), 0.12);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .desktop-topbar {
+  box-shadow: inset 0 -1px 0 rgba(var(--accent-rgb), 0.38), 0 8px 28px rgba(0, 0, 0, 0.32);
+}
+
+.nova-root[data-neon='true']:not([data-color-mode='light']) .desktop-icon:hover,
+.nova-root[data-neon='true']:not([data-color-mode='light']) .desktop-icon:focus-visible {
+  border-color: rgba(var(--accent-rgb), 0.3);
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
+.nova-root[data-neon='true'] .desktop-icon-symbol {
+  border-color: rgba(var(--accent-rgb), 0.38);
+  background: linear-gradient(145deg, rgba(var(--accent-rgb), 0.2), rgba(167, 139, 250, 0.1));
+  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.nova-root[data-neon='true'] .desktop-icon:hover .desktop-icon-symbol,
+.nova-root[data-neon='true'] .desktop-icon:focus-visible .desktop-icon-symbol {
+  transform: translate3d(0, -2px, 0);
+  box-shadow: 0 0 26px rgba(var(--accent-rgb), 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.nova-root[data-neon='true'] .dock-icon { border-color: rgba(var(--accent-rgb), 0.22); }
+
+.nova-root[data-neon='true'] .dock-icon[data-active='true'] {
+  border-color: rgba(var(--accent-rgb), 0.6);
+  background: rgba(var(--accent-rgb), 0.2);
+  box-shadow: 0 0 22px rgba(var(--accent-rgb), 0.35), inset 0 0 12px rgba(var(--accent-rgb), 0.16);
+}
+
+.nova-root[data-neon='true'] .dock-icon[data-running='true']::after {
+  box-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+}
+
+/* Settings and Office inherit the same language ---------------------------- */
+
+.nova-root[data-neon='true'] .settings-card { border-color: rgba(var(--accent-rgb), 0.2); }
+.nova-root[data-neon='true'] .settings-card-title { text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.25); }
+
+.nova-root[data-neon='true'] .office-app-header {
+  border-bottom-color: rgba(var(--accent-rgb), 0.3);
+  background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.07), transparent), var(--glass);
+}
+
+.nova-root[data-neon='true'] .office-primary-button { box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.34); }
+
+.nova-root[data-neon='true'] .office-tool-button.is-active {
+  border-color: rgba(var(--accent-rgb), 0.45);
+  box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.26);
+}
+
+.nova-root[data-neon='true'] .office-statusbar { border-top-color: rgba(var(--accent-rgb), 0.26); }
+
+.nova-root[data-neon='true'] .office-dialog {
+  border-color: rgba(var(--accent-rgb), 0.34);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), 0 0 34px rgba(var(--accent-rgb), 0.16);
+}
+
+.nova-root[data-neon='true'] .office-hub-app-card:hover,
+.nova-root[data-neon='true'] .office-hub-document:hover,
+.nova-root[data-neon='true'] .office-hub-template-preview:hover {
+  border-color: rgba(var(--accent-rgb), 0.4);
+  box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.16);
+}
+
+.nova-root[data-neon='true'] .pdf-welcome-icon,
+.nova-root[data-neon='true'] .slides-background-icon { box-shadow: 0 0 26px rgba(var(--accent-rgb), 0.24); }
+
+/* Light-mode counterparts -------------------------------------------------- */
+
+.nova-root[data-neon='true'][data-color-mode='light'] .glass-panel,
+.nova-root[data-neon='true'][data-color-mode='light'] .window-frame,
+.nova-root[data-neon='true'][data-color-mode='light'] .desktop-topbar,
+.nova-root[data-neon='true'][data-color-mode='light'] .desktop-dock {
+  border-color: rgba(var(--accent-rgb), 0.32);
+  box-shadow: 0 18px 50px rgba(37, 99, 235, 0.12), 0 0 20px rgba(var(--accent-rgb), 0.1);
+}
+
+.nova-root[data-neon='true'][data-color-mode='light'] .nova-button {
+  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.nova-root[data-neon='true'][data-color-mode='light'] .nova-card { border-color: rgba(var(--accent-rgb), 0.22); }
+
+.nova-root[data-neon='true'][data-color-mode='light'] .nova-logo-mark {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 0 22px rgba(var(--accent-rgb), 0.4);
+}
+
+/* Accessibility / performance escapes ------------------------------------- */
+
+.nova-root[data-neon='true'][data-performance='true'] .nova-wallpaper-neon,
+.nova-root[data-neon='true'][data-contrast='high'] .nova-wallpaper-neon { display: none; }
+
+.nova-root[data-neon='true'][data-performance='true'] :is(
+  .glass-panel, .window-frame, .nova-button, .nova-card, .nova-logo-mark, .accent-surface,
+  .desktop-icon-symbol, .dock-icon, .office-primary-button, .office-dialog
+),
+.nova-root[data-neon='true'][data-contrast='high'] :is(
+  .glass-panel, .window-frame, .nova-button, .nova-card, .nova-logo-mark, .accent-surface,
+  .desktop-icon-symbol, .dock-icon, .office-primary-button, .office-dialog
+) {
+  box-shadow: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nova-root[data-neon='true'] .nova-wallpaper-neon::before { animation: none !important; }
+}
+
+.nova-root[data-neon='true'][data-reduced-motion='true'] .nova-wallpaper-neon::before { animation: none !important; }
+
+@media (max-width: 767px) {
+  /* Fewer composited layers on small screens. */
+  .nova-root[data-neon='true'] .nova-wallpaper-neon::before { display: none; }
+}

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Check, Database, Download, Gauge, HardDrive, Info, Monitor, Moon,
-  Palette, RefreshCw, ShieldCheck, SlidersHorizontal, Sun, Upload, X,
+  Palette, Play, RefreshCw, ShieldCheck, SlidersHorizontal, Sun, Upload, X,
 } from 'lucide-react';
 import { useNotifications } from '../context/NotificationContext';
 import { useLauncher } from '../context/LaunchContext';
@@ -10,6 +10,7 @@ import { useI18n } from '../context/LocalizationContext';
 import { MAX_BACKUP_FILE_BYTES, serializeBackup, validateBackup } from '../lib/backup';
 import { getDatabaseSnapshot, initializeDatabase, replaceDatabaseSnapshot } from '../lib/db';
 import { WELCOME_KEY } from '../lib/preferences';
+import { requestBootPreview, resetBootSession } from '../lib/boot';
 import { downloadTextFile, errorMessage, formatBytes, toLocalDateKey } from '../lib/utils';
 import type { NovaBackup } from '../types';
 import { WallpaperPicker } from '../components/WallpaperPicker';
@@ -184,6 +185,9 @@ export default function SettingsApp() {
             <section className="mt-5"><h3 className="text-xs font-medium text-ink/60">Accent</h3><div className="mt-2.5 flex gap-3">{([['blue', '#63a8ff'], ['violet', '#b39afa'], ['cyan', '#55e6e0']] as const).map(([id, color]) => <button key={id} className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border text-[10px] capitalize ${preferences.accent === id ? 'border-ink/25 bg-ink/[0.06] text-ink/75' : 'border-ink/[0.06] text-muted'}`} onClick={() => updatePreferences({ accent: id })} aria-pressed={preferences.accent === id}><span className="h-3 w-3 rounded-full" style={{ background: color, boxShadow: `0 0 10px ${color}55` }} />{id}</button>)}</div></section>
             <WallpaperPicker />
             <div className="mt-5 space-y-3">
+              <SettingsCard title="Visual style">
+                <ToggleRow title="Neon glow" description="Stronger cosmic glow, neon borders and cinematic light across the boot screen, desktop, windows and apps. Performance mode and high contrast keep it subtle." checked={preferences.neonGlow} onChange={() => updatePreferences({ neonGlow: !preferences.neonGlow })} />
+              </SettingsCard>
               <SettingsCard title="Window material">
                 <ToggleRow title="Window transparency" description="Use layered glass behind desktop windows, or choose a solid window surface." checked={preferences.windowTransparent} onChange={() => updatePreferences({ windowTransparent: !preferences.windowTransparent })} />
                 <ToggleRow title="Glass blur" description="Blur content behind glass surfaces. Performance mode always disables blur." checked={preferences.blurEnabled} onChange={() => updatePreferences({ blurEnabled: !preferences.blurEnabled })} />
@@ -211,9 +215,31 @@ export default function SettingsApp() {
 
           {tab === 'system' && <>
             <p className="eyebrow">DESKTOP BEHAVIOR</p><h2 className="mt-1.5 text-xl font-semibold">System preferences</h2><p className="mt-1.5 text-[11px] text-muted">Tune NOVA for comfort or lower-resource hardware.</p>
-            <div className="mt-5 space-y-3"><SettingsCard title="Startup"><ToggleRow title="Startup animation" description="Show the polished NOVA logo entrance. Reduced motion always takes priority." checked={preferences.startupAnimation} onChange={() => updatePreferences({ startupAnimation: !preferences.startupAnimation })} /><ToggleRow title="Startup sound" description="Play a short local chime after a click or key press when browser autoplay rules allow it." checked={preferences.startupSound} onChange={() => updatePreferences({ startupSound: !preferences.startupSound })} /></SettingsCard><SettingsCard title="Accessibility & performance"><ToggleRow title="Reduce motion" description="Minimize interface transitions. Your operating system preference is also respected." checked={preferences.reduceMotion} onChange={() => updatePreferences({ reduceMotion: !preferences.reduceMotion })} /><ToggleRow title="Performance mode" description="Use opaque surfaces and disable backdrop blur to reduce GPU compositing." checked={preferences.performanceMode} onChange={() => updatePreferences({ performanceMode: !preferences.performanceMode })} /><ToggleRow title="High contrast" description="Strengthen text, borders, and focus indicators with more opaque surfaces." checked={preferences.highContrast} onChange={() => updatePreferences({ highContrast: !preferences.highContrast })} /><ToggleRow title="Compact window controls" description="Use a slightly tighter title bar layout." checked={preferences.compactMode} onChange={() => updatePreferences({ compactMode: !preferences.compactMode })} /></SettingsCard><SettingsCard title="Desktop"><ToggleRow title="24-hour clock" description="Use 24-hour time in the system tray." checked={preferences.clock24h} onChange={() => updatePreferences({ clock24h: !preferences.clock24h })} /></SettingsCard></div>
+            <div className="mt-5 space-y-3">
+              <SettingsCard title="Startup">
+                <ToggleRow title="Boot animation" description="Show the cinematic NOVA boot sequence on a cold start. It ends as soon as real initialization is ready." checked={preferences.startupAnimation} onChange={() => updatePreferences({ startupAnimation: !preferences.startupAnimation })} />
+                <ToggleRow title="Desktop animation" description="Fade in the wallpaper, reveal icons in a stagger and slide the taskbar into place." checked={preferences.desktopAnimation} onChange={() => updatePreferences({ desktopAnimation: !preferences.desktopAnimation })} />
+                <ToggleRow title="Startup sound" description="Play a short local chime after a click or key press when browser autoplay rules allow it." checked={preferences.startupSound} onChange={() => updatePreferences({ startupSound: !preferences.startupSound })} />
+                <div className="settings-row settings-row-actions">
+                  <div className="settings-row-copy">
+                    <h4 className="settings-row-title">Boot animation preview</h4>
+                    <p className="settings-row-description">Replay the boot visuals in a dismissible dialog. Open apps and local data are untouched.</p>
+                  </div>
+                  <div className="settings-row-control"><button className="nova-button nova-button-secondary h-8 min-h-8 shrink-0 px-2.5 text-[10px]" onClick={requestBootPreview}><Play size={13} /> Preview boot animation</button></div>
+                </div>
+              </SettingsCard>
+              <SettingsCard title="Accessibility & performance">
+                <ToggleRow title="Reduce motion" description="Minimize boot and desktop motion. Your operating system preference is also respected." checked={preferences.reduceMotion} onChange={() => updatePreferences({ reduceMotion: !preferences.reduceMotion })} />
+                <ToggleRow title="Performance mode" description="Use opaque surfaces and disable backdrop blur to reduce GPU compositing." checked={preferences.performanceMode} onChange={() => updatePreferences({ performanceMode: !preferences.performanceMode })} />
+                <ToggleRow title="High contrast" description="Strengthen text, borders, and focus indicators with more opaque surfaces." checked={preferences.highContrast} onChange={() => updatePreferences({ highContrast: !preferences.highContrast })} />
+                <ToggleRow title="Compact window controls" description="Use a slightly tighter title bar layout." checked={preferences.compactMode} onChange={() => updatePreferences({ compactMode: !preferences.compactMode })} />
+              </SettingsCard>
+              <SettingsCard title="Desktop">
+                <ToggleRow title="24-hour clock" description="Use 24-hour time in the system tray." checked={preferences.clock24h} onChange={() => updatePreferences({ clock24h: !preferences.clock24h })} />
+              </SettingsCard>
+            </div>
             <div className="nova-card mt-4 flex items-center gap-3 p-4"><Gauge size={18} className="accent-text" /><p className="flex-1 text-[10px] leading-5 text-muted">For the Intel i5-3330 / GTX 960 target, Performance mode and reduced motion can lower visual overhead. App code is lazy-loaded and the wallpaper uses static CSS rather than a canvas.</p></div>
-            <div className="mt-5 flex flex-wrap gap-2"><button className="nova-button nova-button-secondary" onClick={resetPreferences}><RefreshCw size={14} /> Reset preferences</button><button className="nova-button nova-button-secondary" onClick={() => { try { localStorage.removeItem(WELCOME_KEY); } catch { /* Storage may be blocked. */ } notify({ title: 'Welcome screen reset', message: 'Reload NOVA to see the welcome experience again.', tone: 'success' }); }}><Monitor size={14} /> Show welcome next launch</button></div>
+            <div className="mt-5 flex flex-wrap gap-2"><button className="nova-button nova-button-secondary" onClick={resetPreferences}><RefreshCw size={14} /> Reset preferences</button><button className="nova-button nova-button-secondary" onClick={() => { try { localStorage.removeItem(WELCOME_KEY); } catch { /* Storage may be blocked. */ } resetBootSession(); notify({ title: 'Welcome screen reset', message: 'Reload NOVA to see the welcome experience again.', tone: 'success' }); }}><Monitor size={14} /> Show welcome next launch</button></div>
           </>}
 
           {tab === 'data' && <>

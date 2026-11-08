@@ -39,7 +39,9 @@ export interface NovaPreferences {
   wallpaper: WallpaperName;
   customWallpaperId: string | null;
   startupAnimation: boolean;
+  desktopAnimation: boolean;
   startupSound: boolean;
+  neonGlow: boolean;
   windowTransparent: boolean;
   windowRadius: WindowRadius;
   glassIntensity: GlassIntensity;

@@ -113,6 +113,17 @@ describe('Settings appearance layout and preferences', () => {
     expect(loadPreferences().recentApps).toEqual(['files']);
   });
 
+  it('lets the user turn the whole-app neon glow layer on and off', async () => {
+    renderSettings();
+    clickTab('Appearance');
+    expect(defaultPreferences.neonGlow).toBe(true);
+    const toggle = screen.getByRole('switch', { name: 'Neon glow' });
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(toggle);
+    await waitFor(() => expect(loadPreferences().neonGlow).toBe(false));
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+  });
+
   it('persists shared language selection without changing the selected control value', async () => {
     const first = renderSettings();
     fireEvent.change(screen.getByRole('combobox', { name: 'Display language' }), { target: { value: 'si' } });
@@ -160,7 +171,7 @@ describe('Settings appearance layout and preferences', () => {
     renderSettings();
     clickTab('System');
     const expected = [
-      ['Startup animation', 'false'], ['Startup sound', 'true'], ['Reduce motion', 'true'],
+      ['Boot animation', 'false'], ['Desktop animation', 'false'], ['Startup sound', 'true'], ['Reduce motion', 'true'],
       ['Performance mode', 'true'], ['High contrast', 'true'], ['Compact window controls', 'true'],
       ['24-hour clock', 'true'],
     ] as const;
@@ -169,7 +180,7 @@ describe('Settings appearance layout and preferences', () => {
       expect(screen.getByRole('switch', { name: label })).toHaveAttribute('aria-checked', checked);
     });
     await waitFor(() => expect(loadPreferences()).toMatchObject({
-      startupAnimation: false, startupSound: true, reduceMotion: true, performanceMode: true,
+      startupAnimation: false, desktopAnimation: false, startupSound: true, reduceMotion: true, performanceMode: true,
       highContrast: true, compactMode: true, clock24h: true,
     }));
 
@@ -181,5 +192,23 @@ describe('Settings appearance layout and preferences', () => {
     clickTab('About');
     expect(screen.getByRole('heading', { name: 'About NOVA Web OS' })).toBeInTheDocument();
     expect(screen.getByText('100% client-side')).toBeInTheDocument();
+  });
+
+  it('requests a boot preview without restarting initialization and resets the welcome path', async () => {
+    const preview = vi.fn();
+    window.addEventListener('nova:preview-boot', preview);
+    sessionStorage.setItem('nova.boot.session.v1', '1');
+    localStorage.setItem('nova.welcomed.v1', '1');
+    renderSettings();
+    clickTab('System');
+
+    fireEvent.click(screen.getByRole('button', { name: /Preview boot animation/ }));
+    expect(preview).toHaveBeenCalledTimes(1);
+    expect(loadPreferences().startupAnimation).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: /Show welcome next launch/ }));
+    expect(localStorage.getItem('nova.welcomed.v1')).toBeNull();
+    expect(sessionStorage.getItem('nova.boot.session.v1')).toBeNull();
+    window.removeEventListener('nova:preview-boot', preview);
   });
 });
